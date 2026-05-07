@@ -82,7 +82,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               id: c.id,
               title: c.title,
               messages: c.messages,
-              model: c.model || 'llama-3.3-70b-versatile',
+              model: c.model || 'JLR-SUPREME-ULTRA',
               updatedAt: new Date(c.updated_at).getTime()
             }));
 
@@ -167,7 +167,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       id: tempId,
       title: 'New Power Session',
       messages: [],
-      model: 'llama-3.3-70b-versatile',
+      model: 'JLR-SUPREME-ULTRA',
       updatedAt: Date.now()
     };
 
@@ -213,7 +213,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             userId: user.id, 
             title: activeChat?.title || 'New Session', 
             messages,
-            model: activeChat?.model || 'llama-3.3-70b-versatile'
+            model: activeChat?.model || 'JLR-SUPREME-ULTRA'
           })
         }).catch(console.error);
       }

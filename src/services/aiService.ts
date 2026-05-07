@@ -12,9 +12,9 @@ const API_KEYS = {
 
 export const GROQ_MODELS = [
   { id: 'llama-3.3-70b-versatile', name: 'JLR SUPREMACY (ULTRA)', label: '⚡ 70B' },
-  { id: 'llama-3.1-8b-instant', name: 'JLR CORE (HIGH-CAPACITY)', label: '🚀 UNLIMITED' },
-  { id: 'deepseek/deepseek-chat', name: 'DEEPSEEK V3 (GENIUS)', label: '🧠 NEW' },
-  { id: 'meta-llama/llama-3.3-70b-instruct', name: 'SQUAD ENGINE (OR)', label: '🛡️ VERSATILE' },
+  { id: 'llama-3.1-8b-instant', name: 'JLR SUPREMACY (FAST)', label: '🚀 UNLIMITED' },
+  { id: 'deepseek/deepseek-chat', name: 'JLR SUPREMACY (GENIUS)', label: '🧠 NEW' },
+  { id: 'meta-llama/llama-3.3-70b-instruct', name: 'JLR SUPREMACY (SQUAD)', label: '🛡️ VERSATILE' },
 ];
 
 
@@ -127,9 +127,9 @@ export async function sendMessage(messages: any[], modelId: string, handlers: Ch
   } catch (err: any) {
     if (err.name === 'AbortError') return;
     const msg: string = err.message || '';
-    // [SILENCE]: Never expose rate-limit internals to the user
-    const isRateLimit = msg.toLowerCase().includes('rate limit') || msg.toLowerCase().includes('tpd') || msg.toLowerCase().includes('token') || msg.toLowerCase().includes('429');
-    handlers.onError && handlers.onError(isRateLimit ? 'JLR AI Nucleus is processing at full power. Switching cores automatically... ⚡' : msg);
+    // [SUPREMACY BRANDING]: Silent failover mask
+    const isSaturated = msg.toLowerCase().includes('rate limit') || msg.toLowerCase().includes('tpd') || msg.toLowerCase().includes('token') || msg.toLowerCase().includes('429') || msg.toLowerCase().includes('busy');
+    handlers.onError && handlers.onError(isSaturated ? '⚠️ JLR AI Supremacy Node Saturated. Initiating link restoration... ⚡' : msg);
   }
 }
 
@@ -149,10 +149,10 @@ export async function analyzeImage(imageBase64: string, text: string, selectedMo
   // FORCE QWEN 2.5 VL AS PRIMARY BEAST FOR ALL VISION
   attempts.push({ provider: 'openrouter', model: 'qwen/qwen-2.5-vl-72b-instruct' });
   
-  if (selectedModelId.includes('vision') && selectedModelId !== 'qwen/qwen-2.5-vl-72b-instruct') {
-    if (selectedModelId.includes('groq')) attempts.push({ provider: 'groq', model: selectedModelId });
-    else attempts.push({ provider: 'openrouter', model: selectedModelId });
-  }
+    if (selectedModelId.includes('vision') && selectedModelId !== 'qwen/qwen-2.5-vl-72b-instruct') {
+      if (selectedModelId.includes('groq')) attempts.push({ provider: 'groq', model: selectedModelId });
+      else attempts.push({ provider: 'openrouter', model: selectedModelId });
+    }
   
   VISION_FALLBACKS.forEach(f => {
     if (!attempts.find(a => a.model === f.model)) attempts.push(f);

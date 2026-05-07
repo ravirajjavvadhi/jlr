@@ -107,7 +107,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: { message: errorData.error?.message || `Provider failure: ${response.status}` } }, { status: response.status });
     }
 
-    return NextResponse.json({ error: { message: 'Intelligence link temporarily busy. Retrying automatically...' } }, { status: 503 });
+    return NextResponse.json({ error: { message: '⚠️ JLR AI Supremacy Node Saturated. Please standby for link restoration... ⚡' } }, { status: 503 });
 
   } catch (err: any) {
     console.error('[API CHAT ERROR]:', err);

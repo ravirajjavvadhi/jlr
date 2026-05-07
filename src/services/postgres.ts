@@ -32,7 +32,7 @@ export async function initDatabase() {
         id TEXT PRIMARY KEY,
         user_id UUID REFERENCES users(id) ON DELETE CASCADE,
         title TEXT,
-        model TEXT DEFAULT 'llama-3.3-70b-versatile',
+        model TEXT DEFAULT 'JLR-SUPREME-ULTRA',
         messages JSONB DEFAULT '[]'::jsonb,
         created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
