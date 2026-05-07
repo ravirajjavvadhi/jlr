@@ -106,16 +106,18 @@ export async function POST(req: NextRequest) {
         const isAuthError = status === 401 || status === 403 || status === 404;
         const isSaturated = status === 429 || msg.includes('rate limit') || msg.includes('saturated') || status === 503 || status === 502;
         
+        const isVisionMode = currentModel.includes('vision') || currentModel.includes('vl');
+
         if (isAuthError || isSaturated) {
            console.warn(`[JLR-AI REDIRECT]: Node ${status} encountered. Re-routing...`);
            
            if (currentProvider === 'openrouter') {
               currentProvider = 'groq';
-              if (currentModel.includes('vision')) currentModel = 'llama-3.2-11b-vision-preview';
+              if (isVisionMode) currentModel = 'llama-3.2-90b-vision-preview';
               else currentModel = 'llama-3.3-70b-versatile';
            } else {
               currentProvider = 'openrouter';
-              if (currentModel.includes('vision')) currentModel = 'qwen/qwen-2.5-vl-72b-instruct';
+              if (isVisionMode) currentModel = 'qwen/qwen-2.5-vl-72b-instruct';
               else currentModel = 'meta-llama/llama-3.3-70b-instruct';
            }
            await new Promise(r => setTimeout(r, 800)); 
