@@ -67,7 +67,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // ─── Auth State Observer ─────────────────────────────────────────────────
   useEffect(() => {
+    const failsafe = setTimeout(() => {
+      if (loading) {
+        console.warn("⚠️ AUTH FAILSAFE: Initialization timed out. Falling back to Guest Mode.");
+        setUser({ id: 'guest', name: 'Guest', email: '', isPro: false, isGuest: true });
+        setChats(loadGuestChats());
+        setLoading(false);
+      }
+    }, 3500);
+
     if (!auth || !db) {
+      clearTimeout(failsafe);
       console.warn("⚠️ AUTH SHIELD: Firebase services not initialized. Running in Offline/Guest mode.");
       setUser({ id: 'guest', name: 'Guest', email: '', isPro: false, isGuest: true });
       setChats(loadGuestChats());
@@ -76,7 +86,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
 
     const unsubAuth = onAuthStateChanged(auth, async (firebaseUser) => {
+      clearTimeout(failsafe);
       setLoading(true);
+
 
 
       // Clean up old Firestore listener
@@ -109,7 +121,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setLoading(false);
     });
 
-    return () => { unsubAuth(); if (firestoreUnsubRef.current) firestoreUnsubRef.current(); };
+    return () => { 
+      clearTimeout(failsafe);
+      unsubAuth(); 
+      if (firestoreUnsubRef.current) firestoreUnsubRef.current(); 
+    };
+
   }, []);
 
   // ─── Auth Methods ─────────────────────────────────────────────────────────
