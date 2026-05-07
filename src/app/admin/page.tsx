@@ -9,6 +9,8 @@ export default function AdminDashboard() {
   const { user } = useAuth();
   const router = useRouter();
   const [users, setUsers] = useState<any[]>([]);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filter, setFilter] = useState<'all' | 'with-key' | 'no-key'>('all');
   const [loading, setLoading] = useState(true);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [status, setStatus] = useState({ type: '', msg: '' });
@@ -16,10 +18,9 @@ export default function AdminDashboard() {
   // [SECURITY BLOCK]: Absolute Authority Check
   useEffect(() => {
     if (!user || user.username !== 'raviraj') {
-      // Small delay to allow auth state to resolve
       const timer = setTimeout(() => {
         if (!user || user.username !== 'raviraj') router.push('/');
-      }, 1000);
+      }, 1500);
       return () => clearTimeout(timer);
     }
     fetchUsers();
@@ -57,6 +58,7 @@ export default function AdminDashboard() {
       const data = await res.json();
       if (data.success) {
         setStatus({ type: 'success', msg: `Neural Link for Node ${userId.slice(0, 5)}... Activated.` });
+        fetchUsers(); // Refresh to update badges
         setTimeout(() => setStatus({ type: '', msg: '' }), 3000);
       } else {
         setStatus({ type: 'error', msg: data.error });
@@ -68,6 +70,14 @@ export default function AdminDashboard() {
     }
   };
 
+  const filteredUsers = users.filter(u => {
+    const matchesSearch = u.username.toLowerCase().includes(searchTerm.toLowerCase());
+    const hasKey = !!u.custom_api_key;
+    if (filter === 'with-key') return matchesSearch && hasKey;
+    if (filter === 'no-key') return matchesSearch && !hasKey;
+    return matchesSearch;
+  });
+
   // --- STYLES (Sovereign Inline System) ---
   const styles = {
     container: {
@@ -76,6 +86,7 @@ export default function AdminDashboard() {
       color: '#f0f0f0',
       fontFamily: 'system-ui, -apple-system, sans-serif',
       padding: '40px 20px',
+      overflowY: 'auto' as const,
     },
     wrapper: {
       maxWidth: '1000px',
@@ -85,7 +96,7 @@ export default function AdminDashboard() {
       display: 'flex',
       justifyContent: 'space-between',
       alignItems: 'center',
-      marginBottom: '60px',
+      marginBottom: '40px',
       borderBottom: '1px solid rgba(255,255,255,0.05)',
       paddingBottom: '30px',
     },
@@ -126,6 +137,73 @@ export default function AdminDashboard() {
       fontWeight: 800,
       marginTop: '4px',
     },
+    controls: {
+      display: 'flex',
+      gap: '15px',
+      marginBottom: '40px',
+      flexWrap: 'wrap' as const,
+    },
+    search: {
+      flex: 2,
+      backgroundColor: 'rgba(255,255,255,0.03)',
+      border: '1px solid rgba(255,255,255,0.1)',
+      borderRadius: '12px',
+      padding: '12px 20px',
+      color: '#fff',
+      fontSize: '13px',
+      outline: 'none',
+      minWidth: '250px',
+    },
+    filterSelect: {
+      flex: 1,
+      backgroundColor: 'rgba(255,255,255,0.03)',
+      border: '1px solid rgba(255,255,255,0.1)',
+      borderRadius: '12px',
+      padding: '12px',
+      color: '#fff',
+      fontSize: '12px',
+      fontWeight: 700,
+      outline: 'none',
+    },
+    card: {
+      backgroundColor: 'rgba(255,255,255,0.02)',
+      border: '1px solid rgba(255,255,255,0.06)',
+      borderRadius: '20px',
+      padding: '24px',
+      marginBottom: '16px',
+      display: 'flex',
+      flexDirection: 'column' as const,
+      gap: '20px',
+    },
+    nodeHeader: {
+      display: 'flex',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+    },
+    badge: (active: boolean) => ({
+      padding: '4px 10px',
+      borderRadius: '6px',
+      fontSize: '9px',
+      fontWeight: 900,
+      textTransform: 'uppercase' as const,
+      letterSpacing: '1px',
+      backgroundColor: active ? 'rgba(16,185,129,0.1)' : 'rgba(245,158,11,0.1)',
+      color: active ? '#10b981' : '#f59e0b',
+      border: `1px solid ${active ? 'rgba(16,185,129,0.2)' : 'rgba(245,158,11,0.2)'}`,
+    }),
+    textarea: {
+      backgroundColor: '#000',
+      border: '1px solid rgba(255,255,255,0.08)',
+      borderRadius: '12px',
+      padding: '15px',
+      color: '#10b981',
+      fontSize: '12px',
+      fontFamily: 'monospace',
+      minHeight: '80px',
+      outline: 'none',
+      width: '100%',
+      boxSizing: 'border-box' as const,
+    },
     backButton: {
       padding: '10px 20px',
       borderRadius: '50px',
@@ -136,119 +214,13 @@ export default function AdminDashboard() {
       fontWeight: 800,
       textTransform: 'uppercase' as const,
       letterSpacing: '1px',
-      transition: 'all 0.2s',
       backgroundColor: 'rgba(255,255,255,0.03)',
-    },
-    status: (type: string) => ({
-      padding: '15px 20px',
-      borderRadius: '12px',
-      marginBottom: '30px',
-      fontSize: '11px',
-      fontWeight: 800,
-      textTransform: 'uppercase' as const,
-      letterSpacing: '1px',
-      backgroundColor: type === 'success' ? 'rgba(16,185,129,0.1)' : 'rgba(239,68,68,0.1)',
-      border: `1px solid ${type === 'success' ? 'rgba(16,185,129,0.2)' : 'rgba(239,68,68,0.2)'}`,
-      color: type === 'success' ? '#34d399' : '#f87171',
-    }),
-    card: {
-      backgroundColor: 'rgba(255,255,255,0.02)',
-      border: '1px solid rgba(255,255,255,0.06)',
-      borderRadius: '20px',
-      padding: '30px',
-      marginBottom: '20px',
-      display: 'flex',
-      flexDirection: 'column' as const,
-      gap: '20px',
-      transition: 'border-color 0.2s',
-    },
-    cardHeader: {
-      display: 'flex',
-      justifyContent: 'space-between',
-      alignItems: 'baseline',
-    },
-    username: {
-      fontSize: '18px',
-      fontWeight: 800,
-      color: '#fff',
-    },
-    nodeId: {
-      fontSize: '10px',
-      color: 'rgba(255,255,255,0.2)',
-      textTransform: 'uppercase' as const,
-      fontWeight: 800,
-      letterSpacing: '1px',
-    },
-    meta: {
-      fontSize: '10px',
-      color: 'rgba(255,255,255,0.3)',
-      textTransform: 'uppercase' as const,
-      fontWeight: 800,
-      letterSpacing: '1.5px',
-    },
-    inputGroup: {
-      display: 'flex',
-      flexDirection: 'column' as const,
-      gap: '8px',
-    },
-    label: {
-      fontSize: '9px',
-      fontWeight: 900,
-      textTransform: 'uppercase' as const,
-      letterSpacing: '2px',
-      color: 'rgba(255,255,255,0.4)',
-    },
-    textarea: {
-      backgroundColor: '#000',
-      border: '1px solid rgba(255,255,255,0.08)',
-      borderRadius: '12px',
-      padding: '15px',
-      color: '#10b981',
-      fontSize: '12px',
-      fontFamily: 'monospace',
-      minHeight: '100px',
-      outline: 'none',
-    },
-    actions: {
-      display: 'flex',
-      gap: '12px',
-    },
-    btnUpdate: {
-      backgroundColor: '#fff',
-      color: '#000',
-      border: 'none',
-      padding: '12px 24px',
-      borderRadius: '12px',
-      fontSize: '11px',
-      fontWeight: 900,
-      textTransform: 'uppercase' as const,
-      letterSpacing: '1.5px',
-      cursor: 'pointer',
-      flex: 1,
-    },
-    btnDanger: {
-      backgroundColor: 'transparent',
-      color: 'rgba(239,68,68,0.6)',
-      border: '1px solid rgba(239,68,68,0.1)',
-      padding: '12px 24px',
-      borderRadius: '12px',
-      fontSize: '11px',
-      fontWeight: 900,
-      textTransform: 'uppercase' as const,
-      letterSpacing: '1.5px',
-      cursor: 'pointer',
-    },
-    empty: {
-      border: '1px dashed rgba(255,255,255,0.1)',
-      borderRadius: '20px',
-      padding: '60px',
-      textAlign: 'center' as const,
     }
   };
 
   if (loading) return (
     <div style={{ ...styles.container, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <p style={{ ...styles.subtitle, color: '#10b981' }}>INITIALIZING COMMAND CENTER...</p>
+      <p style={{ ...styles.subtitle, color: '#10b981' }}>Synchronizing Command Center...</p>
     </div>
   );
 
@@ -257,58 +229,71 @@ export default function AdminDashboard() {
       <div style={styles.wrapper}>
         <header style={styles.header}>
           <div style={styles.titleGroup}>
-            <h1 style={styles.title}>
-              <span style={styles.logoBox}>J</span>
-              Supreme Command Center
-            </h1>
+            <h1 style={styles.title}><span style={styles.logoBox}>J</span>Supreme Command Center</h1>
             <p style={styles.subtitle}>Neural Node Registry & Link Allocation</p>
           </div>
           <Link href="/" style={styles.backButton}>Return to Core</Link>
         </header>
 
+        <div style={styles.controls}>
+          <input 
+            style={styles.search}
+            placeholder="Search Intelligence Nodes (Username)..." 
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+          <select 
+            style={styles.filterSelect}
+            value={filter}
+            onChange={(e) => setFilter(e.target.value as any)}
+          >
+            <option value="all">ALL NODES</option>
+            <option value="with-key">LINKED NODES</option>
+            <option value="no-key">RESTRICTED NODES</option>
+          </select>
+        </div>
+
         {status.msg && (
-          <div style={styles.status(status.type)}>
+          <div style={{ padding: '15px', borderRadius: '12px', marginBottom: '30px', fontSize: '11px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '1px', backgroundColor: status.type === 'success' ? 'rgba(16,185,129,0.1)' : 'rgba(239,68,68,0.1)', border: `1px solid ${status.type === 'success' ? 'rgba(16,185,129,0.2)' : 'rgba(239,68,68,0.2)'}`, color: status.type === 'success' ? '#34d399' : '#f87171' }}>
             {status.msg}
           </div>
         )}
 
-        <div style={{ display: 'grid', gap: '24px' }}>
-          {users.length === 0 ? (
-            <div style={styles.empty}>
-              <p style={{ ...styles.label, fontSize: '14px', color: 'rgba(255,255,255,0.2)' }}>No Neural Nodes Detected</p>
-              <p style={styles.meta}>Users must establish their identity on the platform to be visible here.</p>
+        <div style={{ display: 'grid', gap: '16px' }}>
+          {filteredUsers.length === 0 ? (
+            <div style={{ border: '1px dashed rgba(255,255,255,0.1)', borderRadius: '20px', padding: '60px', textAlign: 'center' }}>
+              <p style={{ fontSize: '11px', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '2px', color: 'rgba(255,255,255,0.2)' }}>No Nodes Match Your Search</p>
             </div>
-          ) : users.map(u => (
+          ) : filteredUsers.map(u => (
             <div key={u.id} style={styles.card}>
-              <div style={styles.cardHeader}>
-                <div>
-                  <div style={styles.username}>@{u.username}</div>
-                  <div style={styles.nodeId}>Sequence ID: {u.id.slice(0, 12)}...</div>
+              <div style={styles.nodeHeader}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <span style={{ fontSize: '18px', fontWeight: 800 }}>@{u.username}</span>
+                  <span style={styles.badge(!!u.custom_api_key)}>{u.custom_api_key ? 'NODE LINKED' : 'LIMITED ACCESS'}</span>
                 </div>
-                <div style={styles.meta}>
-                  Activated: {new Date(u.created_at).toLocaleDateString()}
+                <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.3)', fontWeight: 800 }}>
+                  ESTABLISHED: {new Date(u.created_at).toLocaleDateString()}
                 </div>
               </div>
 
-              <div style={styles.inputGroup}>
-                <label style={styles.label}>Dedicated Neural Keys (Comma Separated)</label>
+              <div>
+                <label style={{ fontSize: '9px', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '2px', color: 'rgba(255,255,255,0.4)', display: 'block', marginBottom: '8px' }}>Dedicated Neural Keys (5-20 comma separated)</label>
                 <textarea
                   style={styles.textarea}
                   defaultValue={u.custom_api_key || ''}
-                  placeholder="Insert Link Keys (e.g., gsk_l9..., gsk_x2...)"
+                  placeholder="gsk_link1, gsk_link2, gsk_link3..."
                   onChange={(e) => u.temp_keys = e.target.value}
                 />
               </div>
 
-              <div style={styles.actions}>
+              <div style={{ display: 'flex', gap: '12px' }}>
                 <button 
-                  style={{ ...styles.btnUpdate, opacity: updatingId === u.id ? 0.5 : 1 }}
+                  style={{ flex: 1, backgroundColor: '#fff', color: '#000', border: 'none', padding: '12px', borderRadius: '10px', fontSize: '11px', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '1px', cursor: 'pointer', opacity: updatingId === u.id ? 0.5 : 1 }}
                   onClick={() => handleUpdateKeys(u.id, u.temp_keys || u.custom_api_key || '')}
                   disabled={updatingId === u.id}
                 >
                   {updatingId === u.id ? 'SYNCHRONIZING...' : 'Establish Neural Link'}
                 </button>
-                <button style={styles.btnDanger}>Suspend Node</button>
               </div>
             </div>
           ))}
