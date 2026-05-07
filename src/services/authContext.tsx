@@ -87,17 +87,37 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               updatedAt: new Date(c.updated_at).getTime()
             }));
 
-            // Smart Merge: Use cloud as source of truth
+            // [SOVEREIGN MERGE]: Synchronize Cloud Archive with Local Node
             setChats(prev => {
-              const cloudIds = new Set(cloud.map(c => c.id));
-              // Keep local chats only if they have messages or are the current one
-              const localOnly = prev.filter(c => !cloudIds.has(c.id) && (c.messages.length > 0 || c.id === currentChatId));
-              const merged = [...localOnly, ...cloud]
-                .filter(c => c.messages.length > 0 || c.id === currentChatId) // Cleanup ghosts
-                .sort((a,b) => b.updatedAt - a.updatedAt);
+              const cloudMap = new Map<string, Chat>(cloud.map(c => [c.id, c]));
+              const localMap = new Map<string, Chat>(prev.map(c => [c.id, c]));
               
-              saveLocalChats(merged, initialUser.id);
-              return merged;
+              const mergedMap = new Map<string, Chat>();
+              
+              // 1. Add cloud chats (Source of Truth)
+              cloud.forEach(c => mergedMap.set(c.id, c));
+              
+              // 2. Add local-only chats if they have content OR are currently active
+              prev.forEach(c => {
+                if (!mergedMap.has(c.id)) {
+                  if (c.messages.length > 0 || c.id === currentChatId) {
+                    mergedMap.set(c.id, c);
+                  }
+                } else {
+                  // Resolve conflict: Use cloud unless local is significantly newer/larger
+                  const cloudVer = mergedMap.get(c.id)!;
+                  if (c.messages.length > cloudVer.messages.length) {
+                    mergedMap.set(c.id, c);
+                  }
+                }
+              });
+
+              const final = Array.from(mergedMap.values())
+               .filter(c => c.messages.length > 0 || c.id === currentChatId) // Absolute purge of ghosts
+               .sort((a,b) => b.updatedAt - a.updatedAt);
+               
+              saveLocalChats(final, initialUser.id);
+              return final;
             });
           }
         } catch (e) {
@@ -185,20 +205,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     });
     
     setCurrentChatId(tempId);
-
-    if (user && !user.isGuest) {
-      fetch('/api/db/chats', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          chatId: tempId, 
-          userId: user.id, 
-          title: chatData.title, 
-          messages: [],
-          model: chatData.model 
-        })
-      }).catch(console.error);
-    }
     return tempId;
   };
 

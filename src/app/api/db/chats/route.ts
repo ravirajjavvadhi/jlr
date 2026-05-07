@@ -11,7 +11,11 @@ export async function GET(req: NextRequest) {
     if (!userId) return NextResponse.json({ error: 'User ID required' }, { status: 400 });
 
     const result = await sql`
-      SELECT * FROM chats WHERE user_id = ${userId} ORDER BY updated_at DESC;
+      SELECT * FROM chats 
+      WHERE user_id = ${userId} 
+      AND messages IS NOT NULL 
+      AND messages != '[]'
+      ORDER BY updated_at DESC;
     `;
     
     return NextResponse.json({ chats: result });

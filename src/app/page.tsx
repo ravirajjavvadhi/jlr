@@ -96,15 +96,17 @@ export default function AppMain() {
       const cloudMsgs = currentChat.messages || [];
       const isChatSwitch = lastChatIdRef.current !== currentChatId;
       
-      if (isChatSwitch || cloudMsgs.length >= localMessages.length) {
+      // Sync local messages ONLY on chat switch OR if local state is remarkably behind cloud
+      // This prevents infinite re-render loops caused by length-based triggers
+      if (isChatSwitch || (localMessages.length === 0 && cloudMsgs.length > 0)) {
         setLocalMessages(cloudMsgs);
         lastChatIdRef.current = currentChatId;
       }
     } else if (!currentChatId) {
-      setLocalMessages([]);
+      if (localMessages.length > 0) setLocalMessages([]);
       lastChatIdRef.current = null;
     }
-  }, [currentChatId, chats, isLoading, localMessages.length]);
+  }, [currentChatId, chats, isLoading]);
 
   const stopStreaming = () => {
     if (abortControllerRef.current) {
