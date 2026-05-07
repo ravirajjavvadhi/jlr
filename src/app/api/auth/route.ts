@@ -54,8 +54,14 @@ export async function POST(req: NextRequest) {
       }
 
       return NextResponse.json({ 
-        user: { id: user.id, username: user.username } 
+        user: { 
+          id: user.id, 
+          username: user.username, 
+          custom_api_key: user.custom_api_key 
+        } 
       });
+
+
     }
 
     return NextResponse.json({ error: 'Invalid action' }, { status: 400 });

@@ -23,9 +23,16 @@ export async function initDatabase() {
         id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
         username TEXT UNIQUE NOT NULL,
         password TEXT NOT NULL,
+        custom_api_key TEXT,
         created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
       );
     `;
+
+    // Ensure the custom_api_key column exists
+    try {
+      await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS custom_api_key TEXT;`;
+    } catch {}
+
 
     await sql`
       CREATE TABLE IF NOT EXISTS chats (

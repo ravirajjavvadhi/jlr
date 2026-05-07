@@ -14,6 +14,7 @@ type User = {
   id: string;
   username: string;
   isGuest?: boolean;
+  custom_api_key?: string;
 };
 
 

@@ -51,7 +51,7 @@ export type ChatHandlers = {
   signal?: AbortSignal;
 };
 
-export async function sendMessage(messages: any[], modelId: string, handlers: ChatHandlers, fileContext?: string) {
+export async function sendMessage(messages: any[], modelId: string, handlers: ChatHandlers, userId?: string, fileContext?: string) {
   const orKey = getStoredApiKey('openrouter');
   const groqKey = getStoredApiKey('groq');
   
@@ -84,7 +84,8 @@ export async function sendMessage(messages: any[], modelId: string, handlers: Ch
         ...messages.map(m => ({ role: m.role, content: m.content }))
       ],
       provider: finalProvider,
-      fileContext: fileContext
+      fileContext: fileContext,
+      userId: userId
     };
 
     const response = await fetch('/api/chat', {
@@ -134,7 +135,7 @@ export async function sendMessage(messages: any[], modelId: string, handlers: Ch
 }
 
 
-export async function analyzeImage(imageBase64: string, text: string, selectedModelId: string, handlers: ChatHandlers) {
+export async function analyzeImage(imageBase64: string, text: string, selectedModelId: string, handlers: ChatHandlers, userId?: string) {
   const orKey = getStoredApiKey('openrouter');
   const groqKey = getStoredApiKey('groq');
   

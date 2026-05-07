@@ -214,7 +214,7 @@ export default function AppMain() {
           },
 
           onError: handleError
-        });
+        }, user?.id);
 
       } else if (hasPdfVisual) {
         const pdfFile = currentFiles.find(f => f.type === 'pdf_visual')!;
@@ -260,7 +260,7 @@ export default function AppMain() {
             if (updatedMessages.length <= 1) autoGenerateTitle(chatId!, originalInput, fullResponse); 
           },
           onError: handleError
-        }, docContext || undefined);
+        }, user?.id, docContext || undefined);
       }
 
     } catch (e: any) { handleError(e.message); }

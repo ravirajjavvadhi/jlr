@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { sql } from '@/services/postgres';
 
 export const runtime = 'edge'; // Use Edge for fast streaming
 
@@ -7,14 +8,30 @@ const OPENROUTER_BASE_URL = 'https://openrouter.ai/api/v1';
 
 export async function POST(req: NextRequest) {
   try {
-    const { messages, model, provider, fileContext } = await req.json();
+    const { messages, model, provider, fileContext, userId } = await req.json();
+
 
     // [SUPREMACY FAILOVER]: Parse list of keys for rotation
-    const groqKeysRaw = process.env.GROQ_API_KEY || process.env.NEXT_PUBLIC_GROQ_API_KEY || '';
+    let groqKeysRaw = process.env.GROQ_API_KEY || process.env.NEXT_PUBLIC_GROQ_API_KEY || '';
+    let orKeysRaw = process.env.OPENROUTER_API_KEY || process.env.NEXT_PUBLIC_OPENROUTER_API_KEY || '';
+
+    // [PERSONAL NEURAL LINK]: Resolve user-specific key from Database
+    if (userId && userId !== 'guest') {
+      try {
+        const userResult = await sql`SELECT custom_api_key FROM users WHERE id = ${userId}`;
+        if (userResult[0]?.custom_api_key) {
+          console.log(`[SUPREMACY ROUTE]: Activating Dedicated Neural Link for ${userId}`);
+          if (provider === 'openrouter') orKeysRaw = userResult[0].custom_api_key;
+          else groqKeysRaw = userResult[0].custom_api_key;
+        }
+      } catch (e) {
+        console.warn("[SUPREMACY ROUTE]: Personal Link resolution failed, falling back to rotation pool.");
+      }
+    }
+
     const groqKeys = groqKeysRaw.split(',').map(k => k.trim()).filter(k => k);
-    
-    const orKeysRaw = process.env.OPENROUTER_API_KEY || process.env.NEXT_PUBLIC_OPENROUTER_API_KEY || '';
     const orKeys = orKeysRaw.split(',').map(k => k.trim()).filter(k => k);
+
 
     let currentModel = model;
     let currentProvider = provider;
