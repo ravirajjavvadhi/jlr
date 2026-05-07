@@ -12,10 +12,11 @@ const API_KEYS = {
 
 export const GROQ_MODELS = [
   { id: 'llama-3.3-70b-versatile', name: 'JLR SUPREMACY (ULTRA)', label: '⚡ 70B' },
+  { id: 'llama-3.1-8b-instant', name: 'JLR CORE (HIGH-CAPACITY)', label: '🚀 UNLIMITED' },
   { id: 'deepseek/deepseek-chat', name: 'DEEPSEEK V3 (GENIUS)', label: '🧠 NEW' },
   { id: 'meta-llama/llama-3.3-70b-instruct', name: 'SQUAD ENGINE (OR)', label: '🛡️ VERSATILE' },
-  { id: 'llama-3.2-11b-vision-preview', name: 'LLAMA VISION (GROQ)', label: '🚨 LEGACY' },
 ];
+
 
 const GEMINI_MODELS: any[] = [];
 
