@@ -100,7 +100,15 @@ export default function AppMain() {
     scrollToBottom(messages.length > 0 && !isLoading); 
   }, [messages, scrollToBottom, isLoading]);
 
+  // Auto-close Auth portal when user successfully logs in
+  useEffect(() => {
+    if (user && user.id !== 'guest') {
+      setShowAuthModal(false);
+    }
+  }, [user]);
+
   if (authLoading) return (
+
     <div style={{ height: '100vh', width: '100vw', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: '#020202', gap: '2rem' }}>
       <motion.div animate={{ rotate: 360 }} transition={{ duration: 2, repeat: Infinity, ease: 'linear' }} style={{ width: '40px', height: '40px', border: '2px solid rgba(255,255,255,0.1)', borderTopColor: '#00f2fe', borderRadius: '50%' }} />
       <div className="text-beast" style={{ fontSize: '0.7rem', letterSpacing: '4px', opacity: 0.5 }}>SYNCHRONIZING WITH SUPREMACY</div>
