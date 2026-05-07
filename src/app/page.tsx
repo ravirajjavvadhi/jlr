@@ -68,6 +68,8 @@ export default function AppMain() {
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [localMessages, setLocalMessages] = useState<any[]>([]);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const lastChatIdRef = useRef<string | null>(null);
+
 
 
   const abortControllerRef = useRef<AbortController | null>(null);
@@ -88,13 +90,25 @@ export default function AppMain() {
   const currentChat = chats.find(c => c.id === currentChatId);
 
   // [SUPREMACY SYNC] - Keep local UI in sync with backend when not active
+  // Protects against stale cloud snapshots overwriting live AI stream
   useEffect(() => {
-    if (!isLoading && currentChat) {
-      setLocalMessages(currentChat.messages || []);
+    if (isLoading) return; 
+    
+    if (currentChat) {
+      const cloudMsgs = currentChat.messages || [];
+      const isChatSwitch = lastChatIdRef.current !== currentChatId;
+      
+      // Only sync if we switched chats OR if the cloud data has caught up/advanced
+      if (isChatSwitch || cloudMsgs.length >= localMessages.length) {
+        setLocalMessages(cloudMsgs);
+        lastChatIdRef.current = currentChatId;
+      }
     } else if (!currentChatId) {
       setLocalMessages([]);
+      lastChatIdRef.current = null;
     }
-  }, [currentChatId, chats, isLoading]);
+  }, [currentChatId, chats, isLoading, localMessages.length]);
+
 
 
   const scrollToBottom = useCallback((smooth = false) => { 
