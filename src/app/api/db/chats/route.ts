@@ -4,7 +4,9 @@ import { initDatabase } from '@/services/postgres';
 
 export async function GET(req: NextRequest) {
   try {
+    await initDatabase();
     const { searchParams } = new URL(req.url);
+
     const userId = searchParams.get('userId');
 
     if (!userId) return NextResponse.json({ error: 'User ID required' }, { status: 400 });
