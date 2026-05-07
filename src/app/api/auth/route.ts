@@ -5,11 +5,8 @@ import bcrypt from 'bcryptjs';
 
 export async function POST(req: NextRequest) {
   try {
-    console.log('[AUTH DB]: Attempting to initialize...');
-    await initDatabase();
-    console.log('[AUTH DB]: Initialization Complete');
-    
     const { searchParams } = new URL(req.url);
+
     const action = searchParams.get('action');
     const { username, password } = await req.json();
 

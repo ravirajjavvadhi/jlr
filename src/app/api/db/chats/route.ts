@@ -4,8 +4,8 @@ import { initDatabase } from '@/services/postgres';
 
 export async function GET(req: NextRequest) {
   try {
-    await initDatabase();
     const { searchParams } = new URL(req.url);
+
 
     const userId = searchParams.get('userId');
 
@@ -23,9 +23,8 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    await initDatabase(); // Ensure tables exist on first write
-
     const { chatId, userId, title, messages } = await req.json();
+
 
     if (!chatId || !userId) {
       return NextResponse.json({ error: 'ChatID and UserID required' }, { status: 400 });
