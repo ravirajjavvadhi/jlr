@@ -61,7 +61,11 @@ function saveGuestChats(chats: Chat[]) {
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-  const [chats, setChats] = useState<Chat[]>([]);
+  const [chats, setChats] = useState<Chat[]>(() => {
+    if (typeof window !== 'undefined') return loadGuestChats();
+    return [];
+  });
+
   const [currentChatId, setCurrentChatId] = useState<string | null>(null);
   const firestoreUnsubRef = useRef<(() => void) | null>(null);
 
@@ -110,8 +114,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         // Attach real-time Firestore listener for this user
         const q = query(collection(db, `users/${firebaseUser.uid}/chats`), orderBy('updatedAt', 'desc'));
         firestoreUnsubRef.current = onSnapshot(q, (snap) => {
-          setChats(snap.docs.map(d => ({ id: d.id, ...d.data() } as Chat)));
+          const freshChats = snap.docs.map(d => ({ id: d.id, ...d.data() } as Chat));
+          setChats(freshChats);
+          saveGuestChats(freshChats); // Cache for instant next load
         });
+
       } else {
         // No Firebase user — run as Guest with local storage
         setUser({ id: 'guest', name: 'Guest', email: '', isPro: false, isGuest: true });
@@ -167,23 +174,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       updatedAt: Date.now()
     };
 
-    if (user?.isGuest || !db) {
-      const id = `guest_${Date.now()}`;
+    // [SUPREMACY SHIFT] - Always create locally first for instant response
+    const tempId = user?.isGuest || !db ? `guest_${Date.now()}` : `sync_${Date.now()}`;
+    const newChat = { id: tempId, ...chatData };
+    const updated = [newChat, ...chats];
+    setChats(updated);
+    saveGuestChats(updated);
+    setCurrentChatId(tempId);
 
-      const newChat = { id, ...chatData };
-      const updated = [newChat, ...chats];
-      setChats(updated);
-      saveGuestChats(updated);
-      setCurrentChatId(id);
-      return id;
+    if (user?.isGuest || !db) return tempId;
+
+    try {
+      const ref = await addDoc(collection(db, `users/${user.id}/chats`), {
+        ...chatData, updatedAt: serverTimestamp()
+      });
+      // Replace temp ID with real ID in background if needed
+      return ref.id;
+    } catch (e) {
+      console.warn("Firebase sync failed, session remains local.");
+      return tempId;
     }
-    if (!user) return '';
-    const ref = await addDoc(collection(db, `users/${user.id}/chats`), {
-      ...chatData, updatedAt: serverTimestamp()
-    });
-    setCurrentChatId(ref.id);
-    return ref.id;
   };
+
 
   const updateChatMessages = async (chatId: string, messages: any[]) => {
     if (user?.isGuest || !db) {

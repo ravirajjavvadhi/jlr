@@ -61,72 +61,37 @@ export async function sendMessage(messages: any[], modelId: string, handlers: Ch
   let finalModelId = modelId;
   let finalProvider = '';
 
-  // 1. Force Qwen Beast for Vision if needed
   if (hasImages) {
     finalProvider = 'openrouter';
     finalModelId = 'qwen/qwen-2.5-vl-72b-instruct';
-  } 
-  // 2. Pivot to DeepSeek V3 for Large/Complex documents (High-Intelligence Fallback)
-  else if (hasComplexDocs) {
+  } else if (hasComplexDocs) {
     finalProvider = 'openrouter';
     finalModelId = 'deepseek/deepseek-chat'; 
-  }
-  // 3. Stay with User Selection for general text
-  else {
+  } else {
     const isGroqModel = modelId.includes('versatile') || modelId.includes('instant');
     finalProvider = ((isGroqModel && groqKey) ? 'groq' : (orKey ? 'openrouter' : 'groq'));
   }
 
-  const apiKey = getStoredApiKey(finalProvider as any);
-  const baseUrl = finalProvider === 'openrouter' ? OPENROUTER_BASE_URL : GROQ_BASE_URL;
-
-  if (finalProvider === 'openrouter') {
-    const isGroqMapped = modelId.includes('versatile') || modelId.includes('instant');
-    if (isGroqMapped) {
-      if (modelId.includes('70b')) finalModelId = 'meta-llama/llama-3.3-70b-instruct';
-      else if (modelId.includes('8b')) finalModelId = 'meta-llama/llama-3.1-8b-instruct';
-      else if (modelId.includes('vision')) finalModelId = 'meta-llama/llama-3.2-90b-vision-instruct';
-    }
-  }
-  
   // Intelligence Boost for Documents
   let systemPrompt = getSystemPrompt();
-  if (hasComplexDocs) {
-    systemPrompt += `\n\n[DOCUMENT INTELLIGENCE MODE ACTIVATED]
-You are currently analyzing high-stakes documents (PDF/XLSX/DOCX). 
-CRITICAL INSTRUCTIONS:
-1. Use the [ATTACHED CONTEXT] provided below as your primary source of truth.
-2. If the user asks to explain or summarize, be extremely precise and professional.
-3. Extract specific data points, trends, and key insights.
-4. If the context is missing or unreadable, advise the user to check if the file is a scanned image or encrypted.
-
-[ATTACHED CONTEXT]:
-${fileContext}`;
-  }
 
   try {
-    let response: Response;
     const payload = {
       model: finalModelId || (finalProvider === 'openrouter' ? 'deepseek/deepseek-chat' : 'llama-3.3-70b-versatile'),
       messages: [
         { role: 'system', content: systemPrompt }, 
         ...messages.map(m => ({ role: m.role, content: m.content }))
       ],
-      stream: true
+      provider: finalProvider,
+      fileContext: fileContext
     };
 
-    response = await fetch(`${baseUrl}/chat/completions`, {
+    const response = await fetch('/api/chat', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${apiKey}`,
-        ...(finalProvider === 'openrouter' ? { 'HTTP-Referer': 'https://jlr-ai.vercel.app', 'X-Title': 'JLR AI Supremacy' } : {})
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
       signal: handlers.signal,
     });
-
-    if (!response) throw new Error('Failed to initiate request');
 
     if (!response.ok) {
       const errorBody = await response.json().catch(() => ({}));
@@ -163,6 +128,7 @@ ${fileContext}`;
     handlers.onError && handlers.onError(err.message);
   }
 }
+
 
 export async function analyzeImage(imageBase64: string, text: string, selectedModelId: string, handlers: ChatHandlers) {
   const orKey = getStoredApiKey('openrouter');
