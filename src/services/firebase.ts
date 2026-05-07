@@ -14,10 +14,22 @@ const firebaseConfig = {
 };
 
 
-// Initialize Firebase (prevent re-initialization)
-const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getFirestore(app);
-const googleProvider = new GoogleAuthProvider();
+// Initialize Firebase Safely
+let app: any, auth: any, db: any, googleProvider: any;
+
+try {
+  if (typeof window !== "undefined" && !firebaseConfig.apiKey) {
+    console.warn("⚠️ FIREBASE SUPREMACY WARNING: Missing API Key. check Vercel Environment Variables.");
+  }
+  
+  app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
+  auth = getAuth(app);
+  db = getFirestore(app);
+  googleProvider = new GoogleAuthProvider();
+} catch (error) {
+  console.error("🔥 FIREBASE CRITICAL SHUTDOWN:", error);
+}
 
 export { app, auth, db, googleProvider };
+
+

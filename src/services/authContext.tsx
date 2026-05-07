@@ -67,8 +67,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // ─── Auth State Observer ─────────────────────────────────────────────────
   useEffect(() => {
+    if (!auth || !db) {
+      console.warn("⚠️ AUTH SHIELD: Firebase services not initialized. Running in Offline/Guest mode.");
+      setUser({ id: 'guest', name: 'Guest', email: '', isPro: false, isGuest: true });
+      setChats(loadGuestChats());
+      setLoading(false);
+      return;
+    }
+
     const unsubAuth = onAuthStateChanged(auth, async (firebaseUser) => {
       setLoading(true);
+
 
       // Clean up old Firestore listener
       if (firestoreUnsubRef.current) { firestoreUnsubRef.current(); firestoreUnsubRef.current = null; }
@@ -141,8 +150,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       updatedAt: Date.now()
     };
 
-    if (user?.isGuest) {
+    if (user?.isGuest || !db) {
       const id = `guest_${Date.now()}`;
+
       const newChat = { id, ...chatData };
       const updated = [newChat, ...chats];
       setChats(updated);
@@ -159,8 +169,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const updateChatMessages = async (chatId: string, messages: any[]) => {
-    if (user?.isGuest) {
+    if (user?.isGuest || !db) {
       const updated = chats.map(c => c.id === chatId ? { ...c, messages, updatedAt: Date.now() } : c);
+
       setChats(updated);
       saveGuestChats(updated);
       return;
@@ -170,8 +181,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const renameChat = async (chatId: string, title: string) => {
-    if (user?.isGuest) {
+    if (user?.isGuest || !db) {
       const updated = chats.map(c => c.id === chatId ? { ...c, title } : c);
+
       setChats(updated);
       saveGuestChats(updated);
       return;
@@ -181,8 +193,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const deleteChat = async (chatId: string) => {
-    if (user?.isGuest) {
+    if (user?.isGuest || !db) {
       const updated = chats.filter(c => c.id !== chatId);
+
       setChats(updated);
       saveGuestChats(updated);
       if (currentChatId === chatId) setCurrentChatId(null);
