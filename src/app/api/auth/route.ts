@@ -1,10 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { sql } from '@vercel/postgres';
+import { initDatabase } from '@/services/postgres';
 import bcrypt from 'bcryptjs';
 
 export async function POST(req: NextRequest) {
   try {
+    await initDatabase(); // Ensure tables exist
     const { searchParams } = new URL(req.url);
+
     const action = searchParams.get('action');
     const { username, password } = await req.json();
 
