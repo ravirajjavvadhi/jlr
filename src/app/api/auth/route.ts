@@ -5,11 +5,15 @@ import bcrypt from 'bcryptjs';
 
 export async function POST(req: NextRequest) {
   try {
-    await initDatabase(); // Ensure tables exist
+    console.log('[AUTH DB]: Attempting to initialize...');
+    await initDatabase();
+    console.log('[AUTH DB]: Initialization Complete');
+    
     const { searchParams } = new URL(req.url);
-
     const action = searchParams.get('action');
     const { username, password } = await req.json();
+
+    console.log(`[AUTH API]: Action=${action}, Username=${username.toLowerCase()}`);
 
     if (!username || !password) {
       return NextResponse.json({ error: 'Username and password required' }, { status: 400 });
@@ -18,21 +22,25 @@ export async function POST(req: NextRequest) {
     if (action === 'signup') {
       const hashedPassword = await bcrypt.hash(password, 10);
       try {
+        console.log('[AUTH DB]: Inserting User...');
         const result = await sql`
           INSERT INTO users (username, password)
           VALUES (${username.toLowerCase()}, ${hashedPassword})
           RETURNING id, username;
         `;
+        console.log('[AUTH DB]: User Inserted Successfully');
         return NextResponse.json({ user: result.rows[0] });
       } catch (err: any) {
+        console.error('[AUTH DB INSERT ERROR]:', err);
         if (err.code === '23505') { // Unique violation
           return NextResponse.json({ error: 'Identity already established' }, { status: 409 });
         }
-        throw err;
+        return NextResponse.json({ error: `DB Save Error: ${err.message}` }, { status: 500 });
       }
     }
 
     if (action === 'login') {
+      console.log('[AUTH DB]: Querying User...');
       const result = await sql`
         SELECT * FROM users WHERE username = ${username.toLowerCase()};
       `;
@@ -56,7 +64,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
 
   } catch (err: any) {
-    console.error('[AUTH API ERROR]:', err);
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    console.error('[AUTH CRITICAL ERROR]:', err);
+    return NextResponse.json({ error: `System Error: ${err.message}` }, { status: 500 });
   }
 }
+

@@ -94,28 +94,57 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // ─── Auth Methods ─────────────────────────────────────────────────────────
   const login = async (username: string, supremacyKey: string) => {
-    const res = await fetch(`/api/auth?action=login`, {
-      method: 'POST',
-      body: JSON.stringify({ username, password: supremacyKey })
-    });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error);
+    try {
+      const res = await fetch(`/api/auth?action=login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password: supremacyKey })
+      });
+      
+      const contentType = res.headers.get("content-type");
+      if (!res.ok) {
+        if (contentType && contentType.includes("application/json")) {
+          const data = await res.json();
+          throw new Error(data.error || 'Identity Access Denied');
+        }
+        throw new Error(`System Error (${res.status}): Please check Vercel DB keys.`);
+      }
 
-    localStorage.setItem('supremacy_session', JSON.stringify(data.user));
-    window.location.reload(); // Refresh to trigger sync
+      const data = await res.json();
+      localStorage.setItem('supremacy_session', JSON.stringify(data.user));
+      window.location.reload(); 
+    } catch (err: any) {
+      console.error("[AUTH ERR]:", err);
+      throw new Error(err.message.includes('fetch') ? 'NETWORK TIMEOUT: Check Vercel Storage Keys' : err.message);
+    }
   };
 
   const signup = async (username: string, supremacyKey: string) => {
-    const res = await fetch(`/api/auth?action=signup`, {
-      method: 'POST',
-      body: JSON.stringify({ username, password: supremacyKey })
-    });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error);
+    try {
+      const res = await fetch(`/api/auth?action=signup`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password: supremacyKey })
+      });
+      
+      const contentType = res.headers.get("content-type");
+      if (!res.ok) {
+        if (contentType && contentType.includes("application/json")) {
+          const data = await res.json();
+          throw new Error(data.error || 'Identity Establishment Failed');
+        }
+        throw new Error(`System Error (${res.status}): Database Link Failed.`);
+      }
 
-    localStorage.setItem('supremacy_session', JSON.stringify(data.user));
-    window.location.reload();
+      const data = await res.json();
+      localStorage.setItem('supremacy_session', JSON.stringify(data.user));
+      window.location.reload();
+    } catch (err: any) {
+      console.error("[AUTH ERR]:", err);
+      throw new Error(err.message.includes('fetch') ? 'NETWORK TIMEOUT: DB Link Unstable' : err.message);
+    }
   };
+
 
   const logout = () => {
     localStorage.removeItem('supremacy_session');
