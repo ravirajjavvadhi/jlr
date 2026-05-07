@@ -195,6 +195,7 @@ export async function analyzeImage(imageBase64: string, text: string, selectedMo
 
   let attempts = [];
   attempts.push({ provider: 'openrouter', model: 'qwen/qwen-2.5-vl-72b-instruct' });
+  let lastProxyError = '';
   
   if (selectedModelId.includes('vision') && selectedModelId !== 'qwen/qwen-2.5-vl-72b-instruct') {
     if (selectedModelId.includes('groq')) attempts.push({ provider: 'groq', model: selectedModelId });
@@ -233,6 +234,8 @@ export async function analyzeImage(imageBase64: string, text: string, selectedMo
       });
 
       if (!response.ok) {
+        const errJson = await response.json().catch(() => ({}));
+        lastProxyError = errJson.error?.message || `Status ${response.status}`;
         continue;
       }
 
@@ -246,24 +249,25 @@ export async function analyzeImage(imageBase64: string, text: string, selectedMo
         const raw = decoder.decode(value);
         const lines = raw.split('\n');
         for (const line of lines) {
-          if (line.startsWith('data: ')) {
-            const data = line.slice(6).trim();
-            if (data === '[DONE]') break;
-            try {
-              const parsed = JSON.parse(data);
-              const content = parsed.choices?.[0]?.delta?.content;
-              if (content) { fullText += content; onToken && onToken(content); }
-            } catch {}
-          }
+           if (line.startsWith('data: ')) {
+             const data = line.slice(6).trim();
+             if (data === '[DONE]') break;
+             try {
+               const parsed = JSON.parse(data);
+               const content = parsed.choices?.[0]?.delta?.content;
+               if (content) { fullText += content; onToken && onToken(content); }
+             } catch {}
+           }
         }
       }
       onDone && onDone(fullText);
       return; 
     } catch (err: any) {
       if (err.name === 'AbortError') return;
+      lastProxyError = err.message;
       console.error(`[JLR-AI] Proxy node error:`, err.message);
     }
   }
 
-  onError && onError(`⚠️ JLR AI Supremacy: Vision Link Saturated. Standby for link restoration... ⚡`);
+  onError && onError(`⚠️ JLR AI Supremacy: ${lastProxyError || 'Vision Link Saturated. Standby for link restoration... ⚡'}`);
 }
