@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { sql } from '@/services/postgres';
+import { sql, initDatabase } from '@/services/postgres';
 
 export async function GET(req: NextRequest) {
   try {
+    await initDatabase(); // [SUPREMACY SYNC]: Ensure column exists
+    
     // [COMMANDER VERIFICATION]: Only Raviraj can access this vault
     const { searchParams } = new URL(req.url);
     const commander = searchParams.get('commander');
@@ -25,6 +27,7 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
+    await initDatabase(); // [SUPREMACY SYNC]: Ensure column exists
     const { commander, targetUserId, keys } = await req.json();
 
     if (commander !== 'raviraj') {
