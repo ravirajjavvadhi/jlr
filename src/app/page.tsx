@@ -419,7 +419,6 @@ export default function AppMain() {
               <textarea 
                 value={input} 
                 onChange={(e) => setInput(e.target.value)} 
-                onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), handleSendMessage())}
                 placeholder="Message JLR AI..." 
                 className="liquid-input" 
                 rows={1}
