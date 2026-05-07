@@ -363,7 +363,7 @@ export default function AppMain() {
               <div className="hologram-card" style={{ padding: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.75rem', borderRadius: '16px', background: 'rgba(255,255,255,0.02)' }}>
                 <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'linear-gradient(45deg, #050505, #222)', border: '1px solid var(--glass-border)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><User size={18} /></div>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: '0.9rem', fontWeight: 900, overflow: 'hidden', textOverflow: 'ellipsis' }}>{user ? user.name : 'GUEST NODE'}</div>
+                  <div style={{ fontSize: '0.9rem', fontWeight: 900, overflow: 'hidden', textOverflow: 'ellipsis' }}>{user ? user.username : 'GUEST NODE'}</div>
                   <div style={{ fontSize: '0.65rem', color: user?.id !== 'guest' ? 'var(--accent-beast)' : 'rgba(255,255,255,0.3)', fontWeight: 800 }}>{user?.id !== 'guest' ? 'SUPREME ACCESS' : 'RESTRICTED LINK'}</div>
                 </div>
                 {user?.id !== 'guest' ? (
