@@ -82,7 +82,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               id: c.id,
               title: c.title,
               messages: c.messages,
-              model: 'llama-3.3-70b-versatile',
+              model: c.model || 'llama-3.3-70b-versatile',
               updatedAt: new Date(c.updated_at).getTime()
             }));
 
@@ -185,7 +185,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       fetch('/api/db/chats', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ chatId: tempId, userId: user.id, title: chatData.title, messages: [] })
+        body: JSON.stringify({ 
+          chatId: tempId, 
+          userId: user.id, 
+          title: chatData.title, 
+          messages: [],
+          model: chatData.model 
+        })
       }).catch(console.error);
     }
     return tempId;
@@ -202,7 +208,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         fetch('/api/db/chats', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ chatId, userId: user.id, title: activeChat?.title || 'New Session', messages })
+          body: JSON.stringify({ 
+            chatId, 
+            userId: user.id, 
+            title: activeChat?.title || 'New Session', 
+            messages,
+            model: activeChat?.model || 'llama-3.3-70b-versatile'
+          })
         }).catch(console.error);
       }
       

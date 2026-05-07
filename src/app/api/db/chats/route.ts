@@ -22,8 +22,7 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const { chatId, userId, title, messages } = await req.json();
-
+    const { chatId, userId, title, messages, model } = await req.json();
 
     if (!chatId || !userId) {
       return NextResponse.json({ error: 'ChatID and UserID required' }, { status: 400 });
@@ -31,14 +30,16 @@ export async function POST(req: NextRequest) {
 
     // Upsert logic for PostgreSQL
     const result = await sql`
-      INSERT INTO chats (id, user_id, title, messages, updated_at)
-      VALUES (${chatId}, ${userId}, ${title}, ${JSON.stringify(messages)}, CURRENT_TIMESTAMP)
+      INSERT INTO chats (id, user_id, title, messages, model, updated_at)
+      VALUES (${chatId}, ${userId}, ${title}, ${JSON.stringify(messages)}, ${model}, CURRENT_TIMESTAMP)
       ON CONFLICT (id) 
       DO UPDATE SET 
         title = EXCLUDED.title, 
-        messages = EXCLUDED.messages, 
+        messages = EXCLUDED.messages,
+        model = EXCLUDED.model,
         updated_at = CURRENT_TIMESTAMP;
     `;
+
 
     return NextResponse.json({ success: true });
   } catch (err: any) {

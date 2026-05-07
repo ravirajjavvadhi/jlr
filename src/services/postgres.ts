@@ -32,14 +32,21 @@ export async function initDatabase() {
         id TEXT PRIMARY KEY,
         user_id UUID REFERENCES users(id) ON DELETE CASCADE,
         title TEXT,
+        model TEXT DEFAULT 'llama-3.3-70b-versatile',
         messages JSONB DEFAULT '[]'::jsonb,
         created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
       );
     `;
 
+    // Ensure the model column exists for existing tables
+    try {
+      await sql`ALTER TABLE chats ADD COLUMN IF NOT EXISTS model TEXT DEFAULT 'llama-3.3-70b-versatile';`;
+    } catch {}
+
     isInitialized = true;
     console.log('[SUPREMACY DB]: Neural Vaults Verified');
+
   } catch (err) {
     console.error('[SUPREMACY DB ERROR]:', err);
     if (!isInitialized) throw err;
