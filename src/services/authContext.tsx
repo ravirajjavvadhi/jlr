@@ -185,14 +185,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
 
     // [SUPREMACY SHIFT] - Always create locally first for instant response
-    const tempId = user?.isGuest || !db ? `guest_${Date.now()}` : `sync_${Date.now()}`;
+    const tempId = (!user || user.isGuest || !db) ? `guest_${Date.now()}` : `sync_${Date.now()}`;
     const newChat = { id: tempId, ...chatData };
     const updated = [newChat, ...chats];
     setChats(updated);
     saveGuestChats(updated);
     setCurrentChatId(tempId);
 
-    if (user?.isGuest || !db) return tempId;
+    if (!user || user.isGuest || !db) return tempId;
+
 
     try {
       const ref = await addDoc(collection(db, `users/${user.id}/chats`), {
