@@ -133,8 +133,13 @@ export default function AppMain() {
     }
 
     const userMessage = { id: Date.now().toString(), role: 'user', content: input, attachments: files.map(f => ({ name: f.name, type: f.type })) };
-    const updatedMessages = [...messages, userMessage];
-    updateChatMessages(chatId, updatedMessages);
+    
+    // Use fresh messages list to avoid stale state issues on first message
+    const baseMessages = currentChatId ? messages : [];
+    const updatedMessages = [...baseMessages, userMessage];
+    
+    await updateChatMessages(chatId, updatedMessages);
+
     const originalInput = input;
     setInput('');
     const currentFiles = [...files];
@@ -428,6 +433,12 @@ export default function AppMain() {
                   outline: 'none',
                   color: '#ffffff',
                   lineHeight: '1.4'
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    handleSendMessage();
+                  }
                 }}
               />
               
