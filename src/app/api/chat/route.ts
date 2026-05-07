@@ -103,27 +103,22 @@ export async function POST(req: NextRequest) {
         const status = response.status;
         const msg = (errorData.error?.message || '').toLowerCase();
         
-        // Critical Auth/Model Errors - STOP and surface
-        if (status === 401 || status === 404) {
-           return NextResponse.json({ error: { message: `🛡️ JLR AI: Node ${status} Error (${currentProvider}). Check API keys/model support.` } }, { status });
-        }
-
+        const isAuthError = status === 401 || status === 403 || status === 404;
         const isSaturated = status === 429 || msg.includes('rate limit') || msg.includes('saturated') || status === 503 || status === 502;
         
-        if (isSaturated) {
-           // Retry logic for Beast mode
-           if (currentModel === 'qwen/qwen-2.5-vl-72b-instruct' && totalAttempts < activeKeys.length) {
-              // try next key for same beast
-              await new Promise(r => setTimeout(r, 1000));
+        if (isAuthError || isSaturated) {
+           console.warn(`[JLR-AI REDIRECT]: Node ${status} encountered. Re-routing...`);
+           
+           if (currentProvider === 'openrouter') {
+              currentProvider = 'groq';
+              if (currentModel.includes('vision')) currentModel = 'llama-3.2-11b-vision-preview';
+              else currentModel = 'llama-3.3-70b-versatile';
            } else {
-              // Switch model or provider
-              currentProvider = currentProvider === 'groq' ? 'openrouter' : 'groq';
-              if (currentModel.includes('vision')) {
-                 currentModel = 'meta-llama/llama-3.2-90b-vision-instruct'; 
-              } else {
-                 currentModel = 'llama-3.1-8b-instant';
-              }
+              currentProvider = 'openrouter';
+              if (currentModel.includes('vision')) currentModel = 'qwen/qwen-2.5-vl-72b-instruct';
+              else currentModel = 'meta-llama/llama-3.3-70b-instruct';
            }
+           await new Promise(r => setTimeout(r, 800)); 
         }
         lastError = msg || `Status ${status}`;
 
