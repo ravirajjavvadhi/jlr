@@ -67,18 +67,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   });
 
   const [currentChatId, setCurrentChatId] = useState<string | null>(null);
+  const loadingRef = useRef(true);
   const firestoreUnsubRef = useRef<(() => void) | null>(null);
 
   // ─── Auth State Observer ─────────────────────────────────────────────────
   useEffect(() => {
     const failsafe = setTimeout(() => {
-      if (loading) {
+      if (loadingRef.current) {
         console.warn("⚠️ AUTH FAILSAFE: Initialization timed out. Falling back to Guest Mode.");
         setUser({ id: 'guest', name: 'Guest', email: '', isPro: false, isGuest: true });
         setChats(loadGuestChats());
+        loadingRef.current = false;
         setLoading(false);
       }
-    }, 3500);
+    }, 3000);
+
 
     if (!auth || !db) {
       clearTimeout(failsafe);
@@ -113,11 +116,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
         // Attach real-time Firestore listener for this user
         const q = query(collection(db, `users/${firebaseUser.uid}/chats`), orderBy('updatedAt', 'desc'));
-        firestoreUnsubRef.current = onSnapshot(q, (snap) => {
-          const freshChats = snap.docs.map(d => ({ id: d.id, ...d.data() } as Chat));
+        const unsub = onSnapshot(q, (snap: any) => {
+          const freshChats = snap.docs.map((d: any) => ({ id: d.id, ...d.data() } as Chat));
           setChats(freshChats);
-          saveGuestChats(freshChats); // Cache for instant next load
+          saveGuestChats(freshChats); 
+        }, (err: any) => {
+          console.error("Firestore snapshot error:", err);
         });
+        firestoreUnsubRef.current = unsub;
+
+
 
       } else {
         // No Firebase user — run as Guest with local storage
@@ -125,8 +133,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setChats(loadGuestChats());
       }
 
+      loadingRef.current = false;
       setLoading(false);
     });
+
 
     return () => { 
       clearTimeout(failsafe);
