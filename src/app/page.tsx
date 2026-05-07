@@ -68,12 +68,10 @@ export default function AppMain() {
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState('');
   const [showAuthModal, setShowAuthModal] = useState(false);
+  const [responseIntelligence, setResponseIntelligence] = useState<'auto' | 'concise' | 'medium' | 'long'>('auto');
   const [localMessages, setLocalMessages] = useState<any[]>([]);
   const scrollRef = useRef<HTMLDivElement>(null);
   const lastChatIdRef = useRef<string | null>(null);
-
-
-
   const abortControllerRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
@@ -91,8 +89,6 @@ export default function AppMain() {
 
   const currentChat = chats.find(c => c.id === currentChatId);
 
-  // [SUPREMACY SYNC] - Keep local UI in sync with backend when not active
-  // Protects against stale cloud snapshots overwriting live AI stream
   useEffect(() => {
     if (isLoading) return; 
     
@@ -100,7 +96,6 @@ export default function AppMain() {
       const cloudMsgs = currentChat.messages || [];
       const isChatSwitch = lastChatIdRef.current !== currentChatId;
       
-      // Only sync if we switched chats OR if the cloud data has caught up/advanced
       if (isChatSwitch || cloudMsgs.length >= localMessages.length) {
         setLocalMessages(cloudMsgs);
         lastChatIdRef.current = currentChatId;
@@ -111,7 +106,13 @@ export default function AppMain() {
     }
   }, [currentChatId, chats, isLoading, localMessages.length]);
 
-
+  const stopStreaming = () => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+    }
+    setIsLoading(false);
+  };
 
   const scrollToBottom = useCallback((smooth = false) => { 
     if (scrollRef.current) {
@@ -123,149 +124,74 @@ export default function AppMain() {
   }, []);
 
   useEffect(() => { 
-    // Use instant scroll during loading/streaming
     scrollToBottom(localMessages.length > 0 && !isLoading); 
   }, [localMessages, scrollToBottom, isLoading]);
 
-  // Auto-close Auth portal when user successfully logs in
   useEffect(() => {
     if (user && user.id !== 'guest') {
       setShowAuthModal(false);
     }
   }, [user]);
 
-  // [ULTRA SUPREMACY] - No more mandatory auth or loading screens.
-  // The portal is now wide open.
-
-
-
-  // if (!user) return <AuthScreen />; (REMOVED - Guest mode enabled)
-
-
   const autoGenerateTitle = async (chatId: string, userMsg: string, aiMsg: string) => {
-    try {
-      await sendMessage([{ role: 'user', content: `Summarize this conversation into a 3-5 word conceptual title. Return ONLY the title. No quotes.\nUser: ${userMsg}\nAI: ${aiMsg}` }], 'llama-3.1-8b-instant', {
-        onDone: (title) => {
-          if (title && title.length < 50) renameChat(chatId, title.trim().replace(/^"|"$/g, ''));
-        }
-      });
-    } catch {}
-  };
-
   const handleSendMessage = async () => {
     if ((!input.trim() && files.length === 0) || isLoading) return;
-    let chatId = currentChatId;
-    if (!chatId) {
-      chatId = await createNewChat();
-    }
-
-    // [SUPREMACY FIX] - Use local state for localMessages during active session to avoid sync lag
-    // [SUPREMACY FIX] - Use local state for localMessages during active session to avoid sync lag
-    const userMessage = { id: Date.now().toString(), role: 'user', content: input, attachments: files.map(f => ({ name: f.name, type: f.type })) };
-    const baseMessages = chatId === currentChatId ? localMessages : [];
-    const updatedMessages = [...baseMessages, userMessage];
     
-    // Update both local state and persistent storage
-    setLocalMessages(updatedMessages);
-    updateChatMessages(chatId, updatedMessages);
-
-
-
+    let chatId = currentChatId || await createNewChat();
+    const userMessage = { id: Date.now().toString(), role: 'user', content: input, attachments: files.map(f => ({ name: f.name, type: f.type })) };
+    const updatedMessagesWithAI = [...localMessages, userMessage];
+    
+    setLocalMessages(updatedMessagesWithAI);
     const originalInput = input;
     setInput('');
-    const currentFiles = [...files];
+    const originalFiles = [...files];
     setFiles([]);
     setIsLoading(true);
     abortControllerRef.current = new AbortController();
-    const aiMessageId = (Date.now() + 1).toString();
-    updateChatMessages(chatId, [...updatedMessages, { id: aiMessageId, role: 'assistant', content: '' }]);
 
-    const handleError = (error: string) => {
-      setIsLoading(false);
-      const errorMsg = { 
-        id: aiMessageId, 
-        role: 'assistant', 
-        content: `⚠️ **SYSTEM ERROR:** ${error}\n\n*Check your API key in Settings.*`,
-        isError: true
-      };
-      setLocalMessages(prev => [...prev.filter(m => m.id !== aiMessageId), errorMsg]);
-      updateChatMessages(chatId!, [...updatedMessages, errorMsg]);
+    const opts = {
+      userId: user?.id,
+      responseLength: responseIntelligence,
+      fileContext: originalFiles.length > 0 ? originalFiles.map(f => `File: ${f.name}\nContent: ${f.data}`).join('\n\n') : undefined,
+      signal: abortControllerRef.current?.signal,
+      onToken: (token: string) => {
+        setLocalMessages(prev => {
+          const last = prev[prev.length - 1];
+          if (last && last.role === 'assistant') {
+            const updated = [...prev];
+            updated[updated.length - 1] = { ...last, content: last.content + token };
+            return updated;
+          }
+          return [...prev, { role: 'assistant', content: token }];
+        });
+      },
+      onDone: (full: string) => {
+        setIsLoading(false);
+        const finalMessages = [...updatedMessagesWithAI, { role: 'assistant', content: full }];
+        updateChatMessages(chatId, finalMessages);
+        if (updatedMessagesWithAI.length === 1 && !currentChat?.title) {
+          autoGenerateTitle(chatId, originalInput, full);
+        }
+      },
+      onError: (err: any) => {
+        setIsLoading(false);
+        setLocalMessages(prev => [...prev, { role: 'assistant', content: `⚠️ ${err.message || err}` }]);
+      }
     };
 
-
-
     try {
-      let fullResponse = '';
-      const hasImage = currentFiles.some(f => f.type === 'image');
-      const hasPdfVisual = currentFiles.some(f => f.type === 'pdf_visual');
-
-      if (hasImage) {
-        const imgFile = currentFiles.find(f => f.type === 'image')!;
-        await analyzeImage(imgFile.data, originalInput, selectedModel, {
-          signal: abortControllerRef.current!.signal,
-          onChunk: (chunk, full) => { 
-            fullResponse = full; 
-            const newAiMsg = { id: aiMessageId, role: 'assistant', content: full };
-            setLocalMessages((prev: any[]) => [...prev.filter((m: any) => m.id !== aiMessageId), newAiMsg]);
-            if (full.length % 20 === 0) updateChatMessages(chatId!, [...updatedMessages, newAiMsg]); 
-          },
-          onDone: () => { 
-            setIsLoading(false); 
-            updateChatMessages(chatId!, [...updatedMessages, { id: aiMessageId, role: 'assistant', content: fullResponse }]);
-            if (localMessages.length === 0) autoGenerateTitle(chatId!, originalInput, fullResponse); 
-          },
-
-          onError: handleError
-        }, user?.id);
-
-      } else if (hasPdfVisual) {
-        const pdfFile = currentFiles.find(f => f.type === 'pdf_visual')!;
-        const allPages = pdfFile.pages || [pdfFile.data];
-        const visionPrompt = originalInput || 'Analyze this document thoroughly. Explain all content, data, and key insights.';
-        const finalPrompt = allPages.length > 1 
-          ? `${visionPrompt}\n\n[MULTI-PAGE DOCUMENT: ${allPages.length} pages rendered]`
-          : visionPrompt;
-
-        await analyzeImage(allPages[0], finalPrompt, selectedModel, {
-          signal: abortControllerRef.current!.signal,
-          onChunk: (chunk, full) => { 
-            fullResponse = full; 
-            const newAiMsg = { id: aiMessageId, role: 'assistant', content: full };
-            setLocalMessages((prev: any[]) => [...prev.filter((m: any) => m.id !== aiMessageId), newAiMsg]);
-            if (full.length % 20 === 0) updateChatMessages(chatId!, [...updatedMessages, newAiMsg]); 
-          },
-          onDone: () => { 
-            setIsLoading(false); 
-            updateChatMessages(chatId!, [...updatedMessages, { id: aiMessageId, role: 'assistant', content: fullResponse }]);
-            if (localMessages.length === 0) autoGenerateTitle(chatId!, originalInput, fullResponse); 
-          },
-
-
-          onError: handleError
-        });
-
+      if (originalFiles.some(f => f.type.startsWith('image/'))) {
+        const image = originalFiles.find(f => f.type.startsWith('image/'))!;
+        await analyzeImage(image.data, originalInput, selectedModel, opts);
       } else {
-        const docContext = currentFiles.filter(f => f.type === 'document').map(f => f.data).join('\n\n---\n\n');
-        await sendMessage(updatedMessages, selectedModel, {
-          signal: abortControllerRef.current!.signal,
-          onChunk: (chunk, full) => { 
-            fullResponse = full; 
-            const newAiMsg = { id: aiMessageId, role: 'assistant', content: full };
-            setLocalMessages((prev: any[]) => [...prev.filter((m: any) => m.id !== aiMessageId), newAiMsg]);
-            // Debounced background sync
-            if (full.length % 20 === 0) updateChatMessages(chatId!, [...updatedMessages, newAiMsg]); 
-          },
-
-          onDone: () => { 
-            setIsLoading(false); 
-            updateChatMessages(chatId!, [...updatedMessages, { id: aiMessageId, role: 'assistant', content: fullResponse }]);
-            if (updatedMessages.length <= 1) autoGenerateTitle(chatId!, originalInput, fullResponse); 
-          },
-          onError: handleError
-        }, user?.id, docContext || undefined);
+        await sendMessage(updatedMessagesWithAI, selectedModel, opts);
       }
-
-    } catch (e: any) { handleError(e.message); }
+    } catch (e: any) {
+      if (e.name !== 'AbortError') {
+        setIsLoading(false);
+        setLocalMessages(prev => [...prev, { role: 'assistant', content: `⚠️ System Link Failure: ${e.message}` }]);
+      }
+    }
   };
 
 
@@ -485,7 +411,33 @@ export default function AppMain() {
             borderRadius: isMobile ? '24px' : '32px',
             boxShadow: '0 20px 50px rgba(0,0,0,0.5)'
           }}>
-            <FileUploader files={files} onFilesChange={setFiles} showButton={false} />
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px', padding: '0 4px' }}>
+              <FileUploader files={files} onFilesChange={setFiles} showButton={false} />
+              
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ fontSize: '9px', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '1px', opacity: 0.4 }}>Length:</span>
+                <select 
+                  value={responseIntelligence}
+                  onChange={(e) => setResponseIntelligence(e.target.value as any)}
+                  style={{ 
+                    background: 'rgba(255,255,255,0.05)', 
+                    border: '1px solid rgba(255,255,255,0.1)', 
+                    borderRadius: '6px', 
+                    color: '#fff', 
+                    fontSize: '10px', 
+                    padding: '2px 8px',
+                    outline: 'none',
+                    fontWeight: 800,
+                    cursor: 'pointer'
+                  }}
+                >
+                  <option value="auto">SMART AUTO</option>
+                  <option value="concise">CONCISE (2-3 L)</option>
+                  <option value="medium">MEDIUM (10-15 L)</option>
+                  <option value="long">LONG (DETAILED)</option>
+                </select>
+              </div>
+            </div>
 
             
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minHeight: '44px' }}>

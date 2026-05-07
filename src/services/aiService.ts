@@ -46,14 +46,36 @@ function getSystemPrompt(): string {
   return SYSTEM_PROMPT_BASE.replace('{USER_NAME}', name);
 }
 
-export type ChatHandlers = {
-  onChunk?: (chunk: string, full: string) => void;
-  onDone?: (fullText: string | null) => void;
-  onError?: (error: string) => void;
+export interface MessageOptions {
+  onToken?: (token: string) => void;
+  onDone?: (fullText: string) => void;
+  onError?: (error: any) => void;
+  fileContext?: string;
+  userId?: string;
+  responseLength?: 'auto' | 'concise' | 'medium' | 'long';
   signal?: AbortSignal;
-};
+}
 
-export async function sendMessage(messages: any[], modelId: string, handlers: ChatHandlers, userId?: string, fileContext?: string) {
+export async function sendMessage(messages: any[], modelId: string, options: MessageOptions = {}) {
+  const { onToken, onDone, onError, fileContext, userId, responseLength = 'auto' } = options;
+  
+  // [INTELLIGENCE SCALING]: Inject precise length instructions
+  let lengthInstruction = "";
+  if (responseLength === 'concise') {
+    lengthInstruction = "\n- MANDATORY: Keep response ultra-concise (2-3 lines max).";
+  } else if (responseLength === 'medium') {
+    lengthInstruction = "\n- MANDATORY: Keep response medium length (10-15 lines approx).";
+  } else if (responseLength === 'long') {
+    lengthInstruction = "\n- MANDATORY: Provide a highly detailed, long, and comprehensive answer.";
+  }
+
+  const finalSystemPrompt = SYSTEM_PROMPT_BASE.replace('{USER_NAME}', 'Commander') + lengthInstruction;
+  
+  const finalMessages = [
+    { role: 'system', content: finalSystemPrompt },
+    ...messages
+  ];
+
   const orKey = getStoredApiKey('openrouter');
   const groqKey = getStoredApiKey('groq');
   
@@ -94,7 +116,7 @@ export async function sendMessage(messages: any[], modelId: string, handlers: Ch
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
-      signal: handlers.signal,
+      signal: options.signal,
     });
 
     if (!response.ok) {
@@ -120,24 +142,25 @@ export async function sendMessage(messages: any[], modelId: string, handlers: Ch
             let content = parsed.choices?.[0]?.delta?.content || '';
             if (content) {
               fullText += content;
-              handlers.onChunk && handlers.onChunk(content, fullText);
+              onToken && onToken(content);
             }
           } catch { }
         }
       }
     }
-    handlers.onDone && handlers.onDone(fullText);
+    onDone && onDone(fullText);
   } catch (err: any) {
     if (err.name === 'AbortError') return;
     const msg: string = err.message || '';
     // [SUPREMACY BRANDING]: Silent failover mask
     const isSaturated = msg.toLowerCase().includes('rate limit') || msg.toLowerCase().includes('tpd') || msg.toLowerCase().includes('token') || msg.toLowerCase().includes('429') || msg.toLowerCase().includes('busy');
-    handlers.onError && handlers.onError(isSaturated ? '⚠️ JLR AI Supremacy Node Saturated. Initiating link restoration... ⚡' : msg);
+    onError && onError(isSaturated ? '⚠️ JLR AI Supremacy Node Saturated. Initiating link restoration... ⚡' : msg);
   }
 }
 
 
-export async function analyzeImage(imageBase64: string, text: string, selectedModelId: string, handlers: ChatHandlers, userId?: string) {
+export async function analyzeImage(imageBase64: string, text: string, selectedModelId: string, options: MessageOptions = {}) {
+  const { onToken, onDone, onError, userId } = options;
   const orKey = getStoredApiKey('openrouter');
   const groqKey = getStoredApiKey('groq');
   
@@ -192,10 +215,9 @@ export async function analyzeImage(imageBase64: string, text: string, selectedMo
               stream: true,
               max_tokens: 2048 // [CREDIT PROTECTION]: Avoid being blocked by balance checks
             }),
-            signal: handlers.signal
+            signal: options.signal
           });
       } else if (provider === 'gemini') {
-        // Direct Google AI Studio Logic
         const geminiPayload = {
           contents: [{ parts: [{ text: text || 'Analyze this image.' }, { inline_data: { mime_type: 'image/jpeg', data: imageBase64.split(',')[1] } }] }]
         };
@@ -203,10 +225,9 @@ export async function analyzeImage(imageBase64: string, text: string, selectedMo
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(geminiPayload),
-          signal: handlers.signal
+          signal: options.signal
         });
       } else {
-        // Groq Fallback
         response = await fetch(`${baseUrl}/chat/completions`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
@@ -215,13 +236,8 @@ export async function analyzeImage(imageBase64: string, text: string, selectedMo
             messages: [{ role: 'user', content: [{ type: 'text', text: text || 'Explain image' }, { type: 'image_url', image_url: { url: imageBase64 } }] }],
             stream: true
           }),
-          signal: handlers.signal
+          signal: options.signal
         });
-      }
-
-      if (!response.ok) {
-        const errorBody = await response.json().catch(() => ({}));
-        throw new Error(errorBody.error?.message || `Status ${response.status}`);
       }
 
       const reader = response.body!.getReader();
@@ -233,19 +249,17 @@ export async function analyzeImage(imageBase64: string, text: string, selectedMo
         if (done) break;
         const raw = decoder.decode(value);
         if (provider === 'gemini') {
-          // Google SSE Parsing
           const lines = raw.split('\n');
           for (const line of lines) {
             if (line.startsWith('data: ')) {
               try {
                 const json = JSON.parse(line.slice(6));
                 const content = json.candidates?.[0]?.content?.parts?.[0]?.text;
-                if (content) { fullText += content; handlers.onChunk && handlers.onChunk(content, fullText); }
+                if (content) { fullText += content; onToken && onToken(content); }
               } catch {}
             }
           }
         } else {
-          // OpenAI Compatible Parsing
           const lines = raw.split('\n');
           for (const line of lines) {
             if (line.startsWith('data: ')) {
@@ -254,20 +268,19 @@ export async function analyzeImage(imageBase64: string, text: string, selectedMo
               try {
                 const parsed = JSON.parse(data);
                 const content = parsed.choices?.[0]?.delta?.content;
-                if (content) { fullText += content; handlers.onChunk && handlers.onChunk(content, fullText); }
+                if (content) { fullText += content; onToken && onToken(content); }
               } catch {}
             }
           }
         }
       }
-      handlers.onDone && handlers.onDone(fullText);
-      return; // SUCCESS EXIT
+      onDone && onDone(fullText);
+      return; 
     } catch (err: any) {
       if (err.name === 'AbortError') return;
-      console.error(`[JLR-AI] Provider ${attempt.provider} (${attempt.model}) failed:`, err.message);
-      errorLogs.push(`${attempt.provider.toUpperCase()}: ${err.message}`);
+      console.error(`[JLR-AI] Provider ${attempt.provider} failed:`, err.message);
     }
   }
 
-  handlers.onError && handlers.onError(`⚠️ JLR AI Supremacy: Vision Link Saturated.\n\nAll intelligence cores are currently processing at full capacity. Please standby for link restoration... ⚡`);
+  onError && onError(`⚠️ JLR AI Supremacy: Vision Link Saturated.\n\nAll intelligence cores are currently processing at full capacity. Please standby for link restoration... ⚡`);
 }
