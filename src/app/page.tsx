@@ -207,8 +207,8 @@ Requirements:
     };
 
     try {
-      if (originalFiles.some(f => f.type.startsWith('image/'))) {
-        const image = originalFiles.find(f => f.type.startsWith('image/'))!;
+      if (originalFiles.some(f => f.type === 'image' || f.type.startsWith('image/'))) {
+        const image = originalFiles.find(f => f.type === 'image' || f.type.startsWith('image/'))!;
         await analyzeImage(image.data, originalInput, selectedModel, opts);
       } else {
         await sendMessage(updatedMessagesWithAI, selectedModel, opts);
