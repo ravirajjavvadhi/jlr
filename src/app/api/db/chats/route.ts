@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { sql } from '@vercel/postgres';
-import { initDatabase } from '@/services/postgres';
+import { sql } from '@/services/postgres';
 
 export async function GET(req: NextRequest) {
   try {
@@ -15,7 +14,7 @@ export async function GET(req: NextRequest) {
       SELECT * FROM chats WHERE user_id = ${userId} ORDER BY updated_at DESC;
     `;
     
-    return NextResponse.json({ chats: result.rows });
+    return NextResponse.json({ chats: result });
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });
   }

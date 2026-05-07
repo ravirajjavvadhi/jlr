@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { sql } from '@vercel/postgres';
-import { initDatabase } from '@/services/postgres';
+import { sql } from '@/services/postgres';
 import bcrypt from 'bcryptjs';
 
 export async function POST(req: NextRequest) {
@@ -26,7 +25,7 @@ export async function POST(req: NextRequest) {
           RETURNING id, username;
         `;
         console.log('[AUTH DB]: User Inserted Successfully');
-        return NextResponse.json({ user: result.rows[0] });
+        return NextResponse.json({ user: result[0] });
       } catch (err: any) {
         console.error('[AUTH DB INSERT ERROR]:', err);
         if (err.code === '23505') { // Unique violation
@@ -42,11 +41,12 @@ export async function POST(req: NextRequest) {
         SELECT * FROM users WHERE username = ${username.toLowerCase()};
       `;
 
-      if (result.rows.length === 0) {
+      if (result.length === 0) {
         return NextResponse.json({ error: 'Identity not found' }, { status: 404 });
       }
 
-      const user = result.rows[0];
+      const user = result[0];
+
       const isValid = await bcrypt.compare(password, user.password);
 
       if (!isValid) {
