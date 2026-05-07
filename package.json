@@ -13,7 +13,6 @@
     "@vercel/postgres": "^0.10.0",
     "bcryptjs": "^3.0.3",
     "clsx": "^2.1.1",
-    "firebase": "^12.12.1",
     "framer-motion": "^12.38.0",
     "lucide-react": "^1.14.0",
     "mammoth": "^1.12.0",
