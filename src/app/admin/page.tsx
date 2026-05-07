@@ -26,9 +26,14 @@ export default function AdminDashboard() {
     try {
       const res = await fetch(`/api/admin/users?commander=raviraj`);
       const data = await res.json();
-      if (data.users) setUsers(data.users);
-    } catch (e) {
+      if (data.users) {
+        setUsers(data.users);
+      } else if (data.error) {
+        setStatus({ type: 'error', msg: `System Diagnostic: ${data.error}` });
+      }
+    } catch (e: any) {
       console.error(e);
+      setStatus({ type: 'error', msg: `Link Failure: ${e.message}` });
     } finally {
       setLoading(false);
     }
@@ -95,7 +100,12 @@ export default function AdminDashboard() {
         )}
 
         <div className="grid gap-6">
-          {users.map(u => (
+          {users.length === 0 ? (
+            <div className="bg-white/[0.02] border border-white/[0.05] border-dashed rounded-2xl p-12 text-center">
+              <p className="text-white/20 uppercase tracking-[0.3em] font-black text-sm">No Neural Nodes Detected</p>
+              <p className="text-white/10 text-[10px] mt-2 uppercase font-bold">Ensure users have established their identity on the platform</p>
+            </div>
+          ) : users.map(u => (
             <div key={u.id} className="bg-white/[0.02] border border-white/[0.05] rounded-2xl p-6 hover:border-white/10 transition-all group">
               <div className="flex flex-col md:flex-row gap-6 items-start">
                 <div className="flex-1">
