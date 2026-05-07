@@ -6,6 +6,21 @@ export const maxDuration = 60; // Extend to 60s for vision reasoning
 const GROQ_BASE_URL = 'https://api.groq.com/openai/v1';
 const OPENROUTER_BASE_URL = 'https://openrouter.ai/api/v1';
 
+// [MODEL MAPPER]: Ensure IDs are perfect for each provider
+function mapModelId(modelId: string, provider: string): string {
+    if (provider === 'groq') {
+        if (modelId.includes('70b')) return 'llama-3.3-70b-versatile';
+        if (modelId.includes('8b')) return 'llama-3.1-8b-instant';
+        return modelId; // default
+    } else {
+        // OpenRouter mappings
+        if (modelId === 'llama-3.3-70b-versatile') return 'meta-llama/llama-3.3-70b-instruct';
+        if (modelId === 'llama-3.1-8b-instant') return 'meta-llama/llama-3.1-8b-instruct';
+        if (modelId.includes('vision') && !modelId.includes('/')) return `meta-llama/${modelId}`;
+        return modelId;
+    }
+}
+
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
@@ -15,18 +30,17 @@ export async function POST(req: NextRequest) {
     let groqKeysRaw = process.env.GROQ_API_KEY || process.env.NEXT_PUBLIC_GROQ_API_KEY || '';
     let orKeysRaw = process.env.OPENROUTER_API_KEY || process.env.NEXT_PUBLIC_OPENROUTER_API_KEY || '';
 
-    // [PERSONAL NEURAL LINK]: Resolve user-specific key from Database
+    // [PERSONAL NEURAL LINK]: Resolve user-specific key
     if (userId && userId !== 'guest') {
       try {
         const userResult = await sql`SELECT custom_api_key FROM users WHERE id = ${userId}`;
         if (userResult[0]?.custom_api_key) {
-          console.log(`[SUPREMACY ROUTE]: Activating Dedicated Neural Link for ${userId}`);
           const userKey = userResult[0].custom_api_key;
           if (provider === 'openrouter') orKeysRaw = userKey;
           else groqKeysRaw = userKey;
         }
       } catch (e) {
-        console.warn("[SUPREMACY ROUTE]: Personal Link resolution failed, falling back to rotation pool.");
+        console.warn("[SUPREMACY ROUTE]: Personal Link resolution failed.");
       }
     }
 
@@ -44,23 +58,26 @@ export async function POST(req: NextRequest) {
       else finalMessages.unshift({ role: 'system', content: `[ATTACHED CONTEXT]:\n${fileContext}` });
     }
 
-    const maxTotalAttempts = (groqKeys.length + orKeys.length) * 2;
+    // [BEAST PERSISTENCE]: Increase attempts to ensure result
+    const maxTotalAttempts = 20; 
     let totalAttempts = 0;
+    let lastError = 'Universal Node Saturation';
 
     while (totalAttempts < maxTotalAttempts) {
-      // Determine active provider/keys/baseUrl for this specific attempt
       const activeKeys = currentProvider === 'openrouter' ? orKeys : groqKeys;
       const baseUrl = currentProvider === 'openrouter' ? OPENROUTER_BASE_URL : GROQ_BASE_URL;
-      const apiKey = activeKeys[totalAttempts % (activeKeys.length || 1)];
-
-      if (!apiKey) {
-        // Switch provider if current one is exhausted
+      
+      if (activeKeys.length === 0) {
         currentProvider = currentProvider === 'groq' ? 'openrouter' : 'groq';
         totalAttempts++;
+        if (totalAttempts > 2) break; // If both pools empty, stop
         continue;
       }
 
-      console.log(`[SUPREMACY RESILIENCY]: Try ${totalAttempts + 1} (${currentProvider}/${currentModel})`);
+      const apiKey = activeKeys[totalAttempts % activeKeys.length];
+      const mappedModel = mapModelId(currentModel, currentProvider);
+
+      console.log(`[JLR-AI] Attempt ${totalAttempts + 1}: ${currentProvider}/${mappedModel}`);
 
       try {
         const response = await fetch(`${baseUrl}/chat/completions`, {
@@ -69,43 +86,56 @@ export async function POST(req: NextRequest) {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${apiKey}`,
             'HTTP-Referer': 'https://jlr-ai.vercel.app',
-            'X-Title': 'JLR AI Supremacy'
           },
-          body: JSON.stringify({ model: currentModel, messages: finalMessages, stream: true }),
+          body: JSON.stringify({ model: mappedModel, messages: finalMessages, stream: true }),
         });
 
-        if (response.ok) return new Response(response.body, { 
-          headers: { 
-            'Content-Type': 'text/event-stream',
-            'Access-Control-Allow-Origin': '*',
-            'Access-Control-Allow-Methods': 'POST, OPTIONS'
-          } 
-        });
-
-        const errorData = await response.json().catch(() => ({}));
-        const msg = (errorData.error?.message || '').toLowerCase();
-        const isSaturated = response.status === 429 || msg.includes('rate limit') || msg.includes('tpd') || msg.includes('saturated');
-
-        // [BEAST SOVEREIGNTY]: Zero-Degradation Retry Loop
-        if (isSaturated) {
-          console.warn(`[BEAST ALERT]: Node ${totalAttempts + 1} Saturated. Retrying Neural Key...`);
-          // Simply continue to next key in rotation for the same model
-          // If we've circled through all keys, then try the next high-tier Beast
-          if (totalAttempts >= activeKeys.length && currentModel === 'qwen/qwen-2.5-vl-72b-instruct') {
-             currentModel = 'meta-llama/llama-3.2-90b-vision-instruct'; // Switch to Llama 90B Beast
-          }
-           await new Promise(r => setTimeout(r, 1000)); // 1s cooldown for Beast recovery
+        if (response.ok) {
+           return new Response(response.body, { 
+             headers: { 
+               'Content-Type': 'text/event-stream',
+               'Access-Control-Allow-Origin': '*'
+             } 
+           });
         }
 
-      } catch (err) {
-        console.error(`[SUPREMACY FAIL]: attempt ${totalAttempts}`, err);
+        const errorData = await response.json().catch(() => ({}));
+        const status = response.status;
+        const msg = (errorData.error?.message || '').toLowerCase();
+        
+        // Critical Auth/Model Errors - STOP and surface
+        if (status === 401 || status === 404) {
+           return NextResponse.json({ error: { message: `🛡️ JLR AI: Node ${status} Error (${currentProvider}). Check API keys/model support.` } }, { status });
+        }
+
+        const isSaturated = status === 429 || msg.includes('rate limit') || msg.includes('saturated') || status === 503 || status === 502;
+        
+        if (isSaturated) {
+           // Retry logic for Beast mode
+           if (currentModel === 'qwen/qwen-2.5-vl-72b-instruct' && totalAttempts < activeKeys.length) {
+              // try next key for same beast
+              await new Promise(r => setTimeout(r, 1000));
+           } else {
+              // Switch model or provider
+              currentProvider = currentProvider === 'groq' ? 'openrouter' : 'groq';
+              if (currentModel.includes('vision')) {
+                 currentModel = 'meta-llama/llama-3.2-90b-vision-instruct'; 
+              } else {
+                 currentModel = 'llama-3.1-8b-instant';
+              }
+           }
+        }
+        lastError = msg || `Status ${status}`;
+
+      } catch (err: any) {
+        console.error(`[JLR-AI FAIL]:`, err.message);
+        currentProvider = currentProvider === 'groq' ? 'openrouter' : 'groq';
       }
 
       totalAttempts++;
-      await new Promise(r => setTimeout(r, 100)); // Ultra-fast retry
     }
 
-    return NextResponse.json({ error: { message: '⚠️ JLR AI Supremacy: Universal Node Saturation. Please standby... ⚡' } }, { status: 503 });
+    return NextResponse.json({ error: { message: `⚠️ JLR AI Supremacy: ${lastError}` } }, { status: 503 });
 
   } catch (err: any) {
     console.error('[API CHAT ERROR]:', err);
