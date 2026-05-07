@@ -134,6 +134,15 @@ export default function AppMain() {
   }, [user]);
 
   const autoGenerateTitle = async (chatId: string, userMsg: string, aiMsg: string) => {
+    try {
+      await sendMessage([{ role: 'user', content: `Summarize into 3-5 words title. ONLY title.\nUser: ${userMsg}\nAI: ${aiMsg}` }], 'llama-3.1-8b-instant', {
+        onDone: (title) => {
+          if (title && title.length < 50) renameChat(chatId, title.trim().replace(/^"|"$/g, ''));
+        }
+      });
+    } catch {}
+  };
+
   const handleSendMessage = async () => {
     if ((!input.trim() && files.length === 0) || isLoading) return;
     
