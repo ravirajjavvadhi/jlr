@@ -135,9 +135,24 @@ export default function AppMain() {
 
   const autoGenerateTitle = async (chatId: string, userMsg: string, aiMsg: string) => {
     try {
-      await sendMessage([{ role: 'user', content: `Summarize into 3-5 words title. ONLY title.\nUser: ${userMsg}\nAI: ${aiMsg}` }], 'llama-3.1-8b-instant', {
+      // Use a more sophisticated prompt for "Supreme" titles
+      const prompt = `Task: Create a 3-5 word high-authority title for this conversation.
+Context:
+User: ${userMsg.slice(0, 500)}
+AI: ${aiMsg.slice(0, 500)}
+
+Requirements:
+- Professional, technical, or descriptive.
+- No quotes.
+- No "Title:".
+- Max 5 words.`;
+
+      await sendMessage([{ role: 'user', content: prompt }], 'llama-3.1-8b-instant', {
         onDone: (title) => {
-          if (title && title.length < 50) renameChat(chatId, title.trim().replace(/^"|"$/g, ''));
+          const cleanTitle = title.trim().replace(/^"|"$/g, '').replace(/^Title:\s*/i, '');
+          if (cleanTitle && cleanTitle.length < 60) {
+            renameChat(chatId, cleanTitle);
+          }
         }
       });
     } catch {}
@@ -178,7 +193,8 @@ export default function AppMain() {
         setIsLoading(false);
         const finalMessages = [...updatedMessagesWithAI, { role: 'assistant', content: full }];
         updateChatMessages(chatId, finalMessages);
-        if (updatedMessagesWithAI.length === 1 && !currentChat?.title) {
+        const isDefaultTitle = !currentChat?.title || currentChat.title === 'New Power Session';
+        if (updatedMessagesWithAI.length === 1 && isDefaultTitle) {
           autoGenerateTitle(chatId, originalInput, full);
         }
       },
@@ -267,7 +283,7 @@ export default function AppMain() {
             
             <div style={{ flex: 1, overflowY: 'auto' }}>
               <p style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.25)', textTransform: 'uppercase', marginBottom: '1.25rem', fontWeight: 900, letterSpacing: '2px' }}>NEURAL ARCHIVE</p>
-              {chats.map(chat => (
+              {chats.filter(c => c.messages.length > 0 || c.id === currentChatId).map(chat => (
                 <div key={chat.id} className={`sidebar-item ${currentChatId === chat.id ? 'active' : ''}`} style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.7rem 0.8rem', marginBottom: '6px', borderRadius: '12px', transition: 'all 0.2s', border: currentChatId === chat.id ? '1px solid var(--glass-border)' : '1px solid transparent', background: currentChatId === chat.id ? 'rgba(255,255,255,0.03)' : 'transparent' }}>
                   <MessageSquare size={16} style={{ opacity: 0.4, flexShrink: 0 }} />
                   {renamingId === chat.id ? (

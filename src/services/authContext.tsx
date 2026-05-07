@@ -87,11 +87,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               updatedAt: new Date(c.updated_at).getTime()
             }));
 
-            // Smart Merge: Use cloud as source of truth, but keep local-only new chats
+            // Smart Merge: Use cloud as source of truth
             setChats(prev => {
               const cloudIds = new Set(cloud.map(c => c.id));
-              const localOnly = prev.filter(c => !cloudIds.has(c.id));
-              const merged = [...localOnly, ...cloud].sort((a,b) => b.updatedAt - a.updatedAt);
+              // Keep local chats only if they have messages or are the current one
+              const localOnly = prev.filter(c => !cloudIds.has(c.id) && (c.messages.length > 0 || c.id === currentChatId));
+              const merged = [...localOnly, ...cloud]
+                .filter(c => c.messages.length > 0 || c.id === currentChatId) // Cleanup ghosts
+                .sort((a,b) => b.updatedAt - a.updatedAt);
+              
               saveLocalChats(merged, initialUser.id);
               return merged;
             });
@@ -206,17 +210,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       if (user && !user.isGuest) {
         const activeChat = updated.find(c => c.id === chatId);
-        fetch('/api/db/chats', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ 
-            chatId, 
-            userId: user.id, 
-            title: activeChat?.title || 'New Session', 
-            messages,
-            model: activeChat?.model || 'JLR-SUPREME-ULTRA'
-          })
-        }).catch(console.error);
+        if (activeChat && activeChat.messages.length > 0) {
+          fetch('/api/db/chats', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+              chatId, 
+              userId: user.id, 
+              title: activeChat?.title || 'New Session', 
+              messages,
+              model: activeChat?.model || 'JLR-SUPREME-ULTRA'
+            })
+          }).catch(console.error);
+        }
       }
       
       return updated;
