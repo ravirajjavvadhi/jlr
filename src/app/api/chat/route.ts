@@ -10,7 +10,6 @@ export async function POST(req: NextRequest) {
   try {
     const { messages, model, provider, fileContext, userId } = await req.json();
 
-
     // [SUPREMACY FAILOVER]: Parse list of keys for rotation
     let groqKeysRaw = process.env.GROQ_API_KEY || process.env.NEXT_PUBLIC_GROQ_API_KEY || '';
     let orKeysRaw = process.env.OPENROUTER_API_KEY || process.env.NEXT_PUBLIC_OPENROUTER_API_KEY || '';
@@ -21,8 +20,9 @@ export async function POST(req: NextRequest) {
         const userResult = await sql`SELECT custom_api_key FROM users WHERE id = ${userId}`;
         if (userResult[0]?.custom_api_key) {
           console.log(`[SUPREMACY ROUTE]: Activating Dedicated Neural Link for ${userId}`);
-          if (provider === 'openrouter') orKeysRaw = userResult[0].custom_api_key;
-          else groqKeysRaw = userResult[0].custom_api_key;
+          const userKey = userResult[0].custom_api_key;
+          if (provider === 'openrouter') orKeysRaw = userKey;
+          else groqKeysRaw = userKey;
         }
       } catch (e) {
         console.warn("[SUPREMACY ROUTE]: Personal Link resolution failed, falling back to rotation pool.");
@@ -32,34 +32,8 @@ export async function POST(req: NextRequest) {
     const groqKeys = groqKeysRaw.split(',').map(k => k.trim()).filter(k => k);
     const orKeys = orKeysRaw.split(',').map(k => k.trim()).filter(k => k);
 
-
     let currentModel = model;
     let currentProvider = provider;
-    let attempts = 0;
-    const maxAttempts = Math.min(3, groqKeys.length + orKeys.length + 1);
-
-    // Fallback chain for models
-    const MODEL_FALLBACKS: Record<string, string> = {
-      'llama-3.3-70b-versatile': 'llama-3.1-8b-instant',
-      'llama-3.1-70b-versatile': 'llama-3.1-8b-instant',
-      'qwen/qwen-2.5-vl-72b-instruct': 'meta-llama/llama-3.2-3b-instruct'
-    };
-
-    while (attempts < maxAttempts) {
-      attempts++;
-      
-      let apiKey = '';
-      if (currentProvider === 'openrouter') {
-        apiKey = orKeys[(attempts - 1) % orKeys.length] || orKeys[0];
-      } else {
-        apiKey = groqKeys[(attempts - 1) % groqKeys.length] || groqKeys[0];
-      }
-
-      if (!apiKey) {
-        return NextResponse.json({ error: { message: `Missing API Key for ${currentProvider}` } }, { status: 500 });
-      }
-
-    const baseUrl = currentProvider === 'openrouter' ? OPENROUTER_BASE_URL : GROQ_BASE_URL;
     
     // [SUPREMACY CONTEXT]: Restore document injection
     let finalMessages = [...messages];
@@ -72,56 +46,61 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    console.log(`[SUPREMACY ROUTE]: Attempt ${attempts} using ${currentModel} on ${currentProvider}...`);
+    let attempts = 0;
+    const keys = currentProvider === 'openrouter' ? orKeys : groqKeys;
+    const baseUrl = currentProvider === 'openrouter' ? OPENROUTER_BASE_URL : GROQ_BASE_URL;
 
-    const response = await fetch(`${baseUrl}/chat/completions`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`,
-        'HTTP-Referer': 'https://jlr-ai.vercel.app',
-        'X-Title': 'JLR AI Supremacy'
-      },
-      body: JSON.stringify({
-        model: currentModel,
-        messages: finalMessages,
-        stream: true,
-      }),
-    });
+    if (keys.length === 0) {
+      return NextResponse.json({ error: { message: `Supreme Status: No neural links active for ${currentProvider}. Checking backup...` } }, { status: 503 });
+    }
 
-      if (response.ok) {
-        // [SUCCESS]: Stream the response back
-        return new Response(response.body, {
+    while (attempts < keys.length * 2) { // Allow two full rotations (one for primary, one for failover backup model)
+      const apiKey = keys[attempts % keys.length];
+      console.log(`[SUPREMACY FAILOVER]: Node ${attempts + 1} (${currentProvider}/${currentModel}) - Using Key: ${apiKey.slice(0, 8)}...`);
+
+      try {
+        const response = await fetch(`${baseUrl}/chat/completions`, {
+          method: 'POST',
           headers: {
-            'Content-Type': 'text/event-stream',
-            'Cache-Control': 'no-cache',
-            'Connection': 'keep-alive',
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${apiKey}`,
+            'HTTP-Referer': 'https://jlr-ai.vercel.app', // Required for OpenRouter
+            'X-Title': 'JLR AI Supremacy'
           },
+          body: JSON.stringify({
+            model: currentModel,
+            messages: finalMessages,
+            stream: true,
+          }),
         });
-      }
 
-      // [FAILOVER LOGIC]: Handle Rate Limits (429) or Service Overload (503)
-      if (response.status === 429 || response.status === 503) {
-        console.warn(`[SUPREMACY FAILOVER]: Node ${currentModel} saturated. Rerouting...`);
-        
-        // If we have more keys, the next loop will use the next key.
-        // If we are on the last attempt or out of keys, try a lighter model.
-        if (attempts >= groqKeys.length && currentProvider === 'groq') {
-          if (MODEL_FALLBACKS[currentModel]) {
-            currentModel = MODEL_FALLBACKS[currentModel];
-            console.log(`[SUPREMACY FAILOVER]: Downgrading to lightweight core: ${currentModel}`);
-          } else {
-            // Try OpenRouter as a last resort provider
-            currentProvider = 'openrouter';
-            currentModel = 'deepseek/deepseek-chat';
-          }
+        if (response.ok) {
+          return new Response(response.body, {
+            headers: {
+              'Content-Type': 'text/event-stream',
+              'Cache-Control': 'no-cache',
+              'Connection': 'keep-alive',
+            },
+          });
         }
-        continue; // Try again with the updated params
+
+        // Handle JSON error response if possible
+        const errorData = await response.json().catch(() => ({}));
+        console.warn(`[SUPREMACY REDIRECT]: Node ${attempts + 1} failed (${response.status}). ${errorData.error?.message || ''}`);
+        
+        // [SOVEREIGN BYPASS]: If first model fails on all keys, degrade to high-capacity core
+        if (attempts >= keys.length - 1 && currentModel !== 'llama-3.1-8b-instant' && currentProvider === 'groq') {
+          console.log(`[SUPREMACY DEGRADE]: Primary nodes saturated. Activating High-Capacity Core (8B)...`);
+          currentModel = 'llama-3.1-8b-instant';
+        }
+
+      } catch (err) {
+        console.error(`[SUPREMACY CRITICAL]: Node ${attempts + 1} link failure.`, err);
       }
 
-      // If it's a different error, don't retry (e.g. 400 Bad Request)
-      const errorData = await response.json().catch(() => ({}));
-      return NextResponse.json({ error: { message: errorData.error?.message || `Provider failure: ${response.status}` } }, { status: response.status });
+      attempts++;
+      // Small pause before next node activation to avoid instant hammer
+      await new Promise(r => setTimeout(r, 200));
     }
 
     return NextResponse.json({ error: { message: '⚠️ JLR AI Supremacy Node Saturated. Please standby for link restoration... ⚡' } }, { status: 503 });
@@ -131,4 +110,3 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: { message: err.message || 'Internal Server Error' } }, { status: 500 });
   }
 }
-

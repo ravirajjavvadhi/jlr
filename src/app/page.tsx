@@ -2,10 +2,12 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import Link from 'next/link';
+
 import { 
   PanelLeft, Send, Plus, MessageSquare, Copy, Check, StopCircle, 
   User, Sparkles, Search, Settings as SettingsIcon, MoreVertical, Zap, 
-  Terminal, ChevronDown, LogOut, Trash2, Edit2, AlertCircle, ArrowRight
+  Terminal, ChevronDown, LogOut, Trash2, Edit2, AlertCircle, ArrowRight, ShieldAlert
 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -366,6 +368,12 @@ export default function AppMain() {
                   <div style={{ fontSize: '0.9rem', fontWeight: 900, overflow: 'hidden', textOverflow: 'ellipsis' }}>{user ? user.username : 'GUEST NODE'}</div>
                   <div style={{ fontSize: '0.65rem', color: user?.id !== 'guest' ? 'var(--accent-beast)' : 'rgba(255,255,255,0.3)', fontWeight: 800 }}>{user?.id !== 'guest' ? 'SUPREME ACCESS' : 'RESTRICTED LINK'}</div>
                 </div>
+                {user?.username === 'raviraj' && (
+                  <Link href="/admin" style={{ color: 'rgba(255,255,255,0.4)' }} title="Supreme Command Center">
+                    <ShieldAlert size={16} />
+                  </Link>
+
+                )}
                 {user?.id !== 'guest' ? (
                   <button onClick={logout} style={{ background: 'transparent', border: 'none', color: 'rgba(255,255,255,0.3)', cursor: 'pointer' }} title="Log Out"><LogOut size={16} /></button>
                 ) : (
