@@ -70,16 +70,34 @@ export async function sendMessage(messages: any[], modelId: string, options: Mes
   const name = (typeof window !== 'undefined' && localStorage.getItem('user_name')) || 'Commander';
   const finalSystemPrompt = SYSTEM_PROMPT_BASE.replace('{USER_NAME}', name) + `\n\n[LENGTH PRIORITY]: ${lengthInstruction}`;
   
+  // [CONTEXT PRUNER]: Keep only last 6 messages to avoid 100k+ token saturation
+  let prunedMessages = messages.slice(-6);
+
+  // [NEURAL OPTIMIZATION]: Strip Base64 images from historical context to prevent massive payload token explosion
+  prunedMessages = prunedMessages.map((msg, index) => {
+    // Keep image only in the very last user message (the current query)
+    if (index < prunedMessages.length - 1 && Array.isArray(msg.content)) {
+       const mappedContent = msg.content.map((c: any) => {
+         if (c.type === 'image_url') return { type: 'text', text: '[PAST IMAGE OMITTED TO SAVE NEURAL BANDWIDTH]' };
+         return c;
+       });
+       return { ...msg, content: mappedContent };
+    }
+    return msg;
+  });
+
   const finalMessages = [
     { role: 'system', content: finalSystemPrompt },
-    ...messages
+    ...prunedMessages
   ];
 
   const orKey = getStoredApiKey('openrouter');
   const groqKey = getStoredApiKey('groq');
   
   // [SMART ROUTER] - Automatically allocate best model based on content
-  const hasImages = messages.some(m => Array.isArray(m.content) && m.content.some((c: any) => typeof c === 'object' && c.type === 'image_url'));
+  // Look at the CURRENT query for images
+  const currentMsg = prunedMessages[prunedMessages.length - 1];
+  const hasImages = currentMsg && Array.isArray(currentMsg.content) && currentMsg.content.some((c: any) => typeof c === 'object' && c.type === 'image_url');
   const hasComplexDocs = !!fileContext || messages.some(m => m.attachments?.length > 0);
   
   let finalModelId = modelId;
