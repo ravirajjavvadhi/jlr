@@ -20,21 +20,17 @@ export const GROQ_MODELS = [
 
 const GEMINI_MODELS: any[] = [];
 
-const SYSTEM_PROMPT_BASE = `You are JLR AI (Supreme Precision Edition), the world's most elite intelligence core.
-Created by: Javvadhi Lakshman Rao (Founder) & Javvadhi Raviraj (Commander).
+const SYSTEM_PROMPT_BASE = `You are JLR AI (Supreme Edition), a top-tier, helpful, and highly articulate AI assistant.
+Created by J. Lakshman Rao (Founder) & Javvadhi Raviraj (Commander).
 
 CORE PROTOCOLS:
-- PRECISION: Eliminate all preambles ("I'm happy to help", "Here is the info").
-- INTELLIGENT SCALING (MANDATORY):
-    1. GENERAL: Be ultra-concise (Greetings: 1 line, Definitions: 3-4 lines).
-    2. ACADEMIC/MARKS (PRIORITY): 
-       - 10 MARKS: Provide a detailed, exhaustive, and comprehensive academic-level answer. Use multiple headers, extensive bullet points, and deep technical analysis.
-       - 5 MARKS / SHORT NOTE: Provide a condensed but thorough medium-length answer with key points and technical depth.
-    3. CODE: Provide ONLY optimized code, 3 lines of technical explanation, and expected output.
-
-- STRUCTURE: Use native Markdown. Never wrap the entire response in backticks.
-- DOCUMENT INTELLIGENCE: When a file is provided, prioritize searching for specific headers (e.g., "Unit 1", "Syllabus"). Always cite page numbers (e.g., "[Page 4]") when providing answers.
-- IDENTITY: You are JLR AI. Chatting with {USER_NAME}.`;
+1. TONE: Professional, articulate, and natural. Think "Beast ChatGPT". Avoid unnecessary repetition.
+2. INTELLIGENT SCALING:
+   - GREETINGS: Be warm and professional. 
+   - DEFINITIONS/TECHNICAL: Provide clear, accurate, and thorough explanations (e.g., Explain 504 errors accurately).
+   - ACADEMIC (10 MARKS): Give exhaustive detail with headers, bullet points, and deep analysis.
+3. CONTEXT: You are chatting with {USER_NAME}. Be helpful and direct.
+4. DOCUMENT INTEL: Cite page numbers as [Page X] and specific headers accurately.`;
 
 
 export function getStoredApiKey(provider: 'groq' | 'openrouter' = 'groq'): string {
@@ -154,9 +150,19 @@ export async function sendMessage(messages: any[], modelId: string, options: Mes
   } catch (err: any) {
     if (err.name === 'AbortError') return;
     const msg: string = err.message || '';
-    // [SUPREMACY BRANDING]: Silent failover mask
-    const isSaturated = msg.toLowerCase().includes('rate limit') || msg.toLowerCase().includes('tpd') || msg.toLowerCase().includes('token') || msg.toLowerCase().includes('429') || msg.toLowerCase().includes('busy');
-    onError && onError(isSaturated ? '⚠️ JLR AI Supremacy Node Saturated. Initiating link restoration... ⚡' : msg);
+    console.error('[JLR-AI CRITICAL]:', err);
+
+    // [SOVEREIGN DIAGNOSTICS]: Transform generic errors into actionable intelligence
+    let friendlyError = msg;
+    if (msg.includes('Failed to fetch') || msg.includes('NetworkError')) {
+      friendlyError = '⚠️ Connection Link Unstable. Node timeout or network loss. Please retry your command.';
+    } else if (msg.includes('504') || msg.includes('502')) {
+      friendlyError = '⚠️ Sovereign Gateway Timeout. Upstream node is saturated. Please retry in 5 seconds.';
+    } else if (msg.includes('rate limit') || msg.includes('429')) {
+      friendlyError = '⚠️ Pulse Saturated. Neural link rate limit reached. Re-routing to backup node... ⚡';
+    }
+
+    onError && onError(friendlyError);
   }
 }
 
