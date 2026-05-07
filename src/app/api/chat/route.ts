@@ -74,22 +74,27 @@ export async function POST(req: NextRequest) {
           body: JSON.stringify({ model: currentModel, messages: finalMessages, stream: true }),
         });
 
-        if (response.ok) return new Response(response.body, { headers: { 'Content-Type': 'text/event-stream' } });
+        if (response.ok) return new Response(response.body, { 
+          headers: { 
+            'Content-Type': 'text/event-stream',
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'POST, OPTIONS'
+          } 
+        });
 
         const errorData = await response.json().catch(() => ({}));
-        const msg = errorData.error?.message?.toLowerCase() || '';
+        const msg = (errorData.error?.message || '').toLowerCase();
         const isSaturated = response.status === 429 || msg.includes('rate limit') || msg.includes('tpd') || msg.includes('saturated');
 
-        // [DEGRADATION PROTOCOL]: If primary is saturated, drop to high-capacity core immediately for next try
-        if (isSaturated && currentModel !== 'llama-3.1-8b-instant') {
-          console.warn("[SUPREMACY DEGRADE]: Model saturated. Switching to High-Capacity Core.");
-          currentModel = 'llama-3.1-8b-instant';
-          // If we were on OpenRouter, maybe try the 8B there too
-          if (currentProvider === 'openrouter') currentModel = 'meta-llama/llama-3.1-8b-instruct';
-        } else if (isSaturated) {
-          // If even 8B is saturated, flip provider
-          console.warn("[SUPREMACY CROSS-LINK]: Provider saturated. Flipping provider.");
-          currentProvider = currentProvider === 'groq' ? 'openrouter' : 'groq';
+        // [BEAST SOVEREIGNTY]: Zero-Degradation Retry Loop
+        if (isSaturated) {
+          console.warn(`[BEAST ALERT]: Node ${totalAttempts + 1} Saturated. Retrying Neural Key...`);
+          // Simply continue to next key in rotation for the same model
+          // If we've circled through all keys, then try the next high-tier Beast
+          if (totalAttempts >= activeKeys.length && currentModel === 'qwen/qwen-2.5-vl-72b-instruct') {
+             currentModel = 'meta-llama/llama-3.2-90b-vision-instruct'; // Switch to Llama 90B Beast
+          }
+           await new Promise(r => setTimeout(r, 1000)); // 1s cooldown for Beast recovery
         }
 
       } catch (err) {
