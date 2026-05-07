@@ -35,55 +35,69 @@ type AuthContextType = {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 
-// ─── Guest Local Storage helpers ────────────────────────────────────────────
-function loadGuestChats(): Chat[] {
-  try { return JSON.parse(localStorage.getItem('guest_chats') || '[]'); } catch { return []; }
+// ─── Namespaced Local Storage helpers ─────────────────────────────────────────
+function getStorageKey(userId?: string) {
+  return userId ? `supremacy_chats_${userId}` : 'supremacy_chats_guest';
 }
-function saveGuestChats(chats: Chat[]) {
-  localStorage.setItem('guest_chats', JSON.stringify(chats));
+
+function loadLocalChats(userId?: string): Chat[] {
+  if (typeof window === 'undefined') return [];
+  try { 
+    return JSON.parse(localStorage.getItem(getStorageKey(userId)) || '[]'); 
+  } catch { return []; }
+}
+
+function saveLocalChats(chats: Chat[], userId?: string) {
+  localStorage.setItem(getStorageKey(userId), JSON.stringify(chats));
 }
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-  const [chats, setChats] = useState<Chat[]>(() => {
-    if (typeof window !== 'undefined') return loadGuestChats();
-    return [];
-  });
-
+  const [chats, setChats] = useState<Chat[]>([]);
   const [currentChatId, setCurrentChatId] = useState<string | null>(null);
-  const loadingRef = useRef(true);
-  const firestoreUnsubRef = useRef<(() => void) | null>(null);
 
   // ─── Identity Synchronization ──────────────────────────────────────────
   useEffect(() => {
     const initIdentity = async () => {
       setLoading(true);
-      const savedUser = localStorage.getItem('supremacy_session');
+      const sessionData = localStorage.getItem('supremacy_session');
       
-      if (savedUser) {
-        const u = JSON.parse(savedUser);
-        setUser(u);
-        // Load cloud chats
+      let initialUser: User = { id: 'guest', username: 'Guest', isGuest: true };
+      if (sessionData) {
+        try { initialUser = JSON.parse(sessionData); } catch {}
+      }
+      
+      setUser(initialUser);
+      // Immediately load local namespaced cache to prevent 1-2s disappearing act
+      const locals = loadLocalChats(initialUser.id);
+      setChats(locals);
+
+      if (!initialUser.isGuest) {
         try {
-          const res = await fetch(`/api/db/chats?userId=${u.id}`);
+          const res = await fetch(`/api/db/chats?userId=${initialUser.id}`);
           if (res.ok) {
             const data = await res.json();
-            const formatted = data.chats.map((c: any) => ({
+            const cloud: Chat[] = data.chats.map((c: any) => ({
               id: c.id,
               title: c.title,
               messages: c.messages,
+              model: 'llama-3.3-70b-versatile',
               updatedAt: new Date(c.updated_at).getTime()
             }));
-            setChats(formatted.length > 0 ? formatted : loadGuestChats());
+
+            // Smart Merge: Use cloud as source of truth, but keep local-only new chats
+            setChats(prev => {
+              const cloudIds = new Set(cloud.map(c => c.id));
+              const localOnly = prev.filter(c => !cloudIds.has(c.id));
+              const merged = [...localOnly, ...cloud].sort((a,b) => b.updatedAt - a.updatedAt);
+              saveLocalChats(merged, initialUser.id);
+              return merged;
+            });
           }
         } catch (e) {
-          console.warn("Cloud sync deferred. Running local.");
-          setChats(loadGuestChats());
+          console.warn("[SUPREMACY SYNC]: Cloud sync deferred.");
         }
-      } else {
-        setUser({ id: 'guest', username: 'Guest', isGuest: true });
-        setChats(loadGuestChats());
       }
       setLoading(false);
     };
@@ -101,13 +115,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         body: JSON.stringify({ username, password: supremacyKey })
       });
       
-      const contentType = res.headers.get("content-type");
       if (!res.ok) {
-        if (contentType && contentType.includes("application/json")) {
-          const data = await res.json();
-          throw new Error(data.error || 'Identity Access Denied');
-        }
-        throw new Error(`System Error (${res.status}): Please check Vercel DB keys.`);
+        const data = await res.json().catch(() => ({ error: 'Handshake Failed' }));
+        throw new Error(data.error || 'Identity Access Denied');
       }
 
       const data = await res.json();
@@ -127,19 +137,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         body: JSON.stringify({ username, password: supremacyKey })
       });
       
-      const contentType = res.headers.get("content-type");
       if (!res.ok) {
-        if (contentType && contentType.includes("application/json")) {
-          const data = await res.json();
-          throw new Error(data.error || 'Identity Establishment Failed');
-        }
-        throw new Error(`System Error (${res.status}): Database Link Failed.`);
+        const data = await res.json().catch(() => ({ error: 'Link Failed' }));
+        throw new Error(data.error || 'Identity Establishment Failed');
       }
 
       const data = await res.json();
       localStorage.setItem('supremacy_session', JSON.stringify(data.user));
       window.location.reload();
     } catch (err: any) {
+
       console.error("[AUTH ERR]:", err);
       throw new Error(err.message.includes('fetch') ? 'NETWORK TIMEOUT: DB Link Unstable' : err.message);
     }
@@ -148,33 +155,36 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const logout = () => {
     localStorage.removeItem('supremacy_session');
+    // We don't remove namespaced chat storage so the user's data remains on device
     window.location.reload();
   };
 
 
   // ─── Chat Actions ─────────────────────────────────────────────────────────
   const createNewChat = async (): Promise<string> => {
-    const chatData: Omit<Chat, 'id'> = {
+    const tempId = `session_${Date.now()}`;
+    const chatData: Chat = {
+      id: tempId,
       title: 'New Power Session',
       messages: [],
       model: 'llama-3.3-70b-versatile',
       updatedAt: Date.now()
     };
 
-    // [SUPREMACY SHIFT] - Always create locally first for instant response
-    const tempId = `session_${Date.now()}`;
-    const newChat = { id: tempId, ...chatData };
     setChats(prev => {
-      const updated = [newChat, ...prev];
-      saveGuestChats(updated);
+      // Prevent duplicate creation of the same temp ID in rapid state updates
+      if (prev.some(c => c.id === tempId)) return prev;
+      const updated = [chatData, ...prev];
+      saveLocalChats(updated, user?.id);
       return updated;
     });
+    
     setCurrentChatId(tempId);
-
 
     if (user && !user.isGuest) {
       fetch('/api/db/chats', {
         method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ chatId: tempId, userId: user.id, title: chatData.title, messages: [] })
       }).catch(console.error);
     }
@@ -185,12 +195,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const updateChatMessages = async (chatId: string, messages: any[]) => {
     setChats(prev => {
       const updated = prev.map(c => c.id === chatId ? { ...c, messages, updatedAt: Date.now() } : c);
-      saveGuestChats(updated);
+      saveLocalChats(updated, user?.id);
       
       if (user && !user.isGuest) {
         const activeChat = updated.find(c => c.id === chatId);
         fetch('/api/db/chats', {
           method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ chatId, userId: user.id, title: activeChat?.title || 'New Session', messages })
         }).catch(console.error);
       }
@@ -202,12 +213,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const renameChat = async (chatId: string, title: string) => {
     setChats(prev => {
       const updated = prev.map(c => c.id === chatId ? { ...c, title } : c);
-      saveGuestChats(updated);
+      saveLocalChats(updated, user?.id);
 
       if (user && !user.isGuest) {
         const activeChat = updated.find(c => c.id === chatId);
         fetch('/api/db/chats', {
           method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ chatId, userId: user.id, title, messages: activeChat?.messages || [] })
         }).catch(console.error);
       }
@@ -215,12 +227,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     });
   };
 
-
-
   const deleteChat = async (chatId: string) => {
     setChats(prev => {
       const updated = prev.filter(c => c.id !== chatId);
-      saveGuestChats(updated);
+      saveLocalChats(updated, user?.id);
       return updated;
     });
 
@@ -229,6 +239,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
     if (currentChatId === chatId) setCurrentChatId(null);
   };
+
 
   return (
     <AuthContext.Provider value={{
