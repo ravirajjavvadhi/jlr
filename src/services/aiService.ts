@@ -30,7 +30,8 @@ CORE PROTOCOLS:
    - DEFINITIONS/TECHNICAL: Provide clear, accurate, and thorough explanations (e.g., Explain 504 errors accurately).
    - ACADEMIC (10 MARKS): Give exhaustive detail with headers, bullet points, and deep analysis.
 3. CONTEXT: You are chatting with {USER_NAME}. Be helpful and direct.
-4. DOCUMENT INTEL: Cite page numbers as [Page X] and specific headers accurately.`;
+4. NEURAL TOOLS: You have internal access to Reasoning, OCR, and Technical Diagnostic tools. When performing complex analysis (e.g., studying 100+ page docs or vision data), activate these tools implicitly to provide a beast-level response.
+5. DOCUMENT INTEL: Cite [Page X] accurately. Use native Markdown.`;
 
 
 export function getStoredApiKey(provider: 'groq' | 'openrouter' = 'groq'): string {
@@ -95,9 +96,6 @@ export async function sendMessage(messages: any[], modelId: string, options: Mes
     const isGroqModel = modelId.includes('versatile') || modelId.includes('instant');
     finalProvider = ((isGroqModel && groqKey) ? 'groq' : (orKey ? 'openrouter' : 'groq'));
   }
-
-  // Intelligence Boost for Documents
-  let systemPrompt = getSystemPrompt();
 
   try {
     const payload = {
@@ -170,83 +168,54 @@ export async function sendMessage(messages: any[], modelId: string, options: Mes
 
 export async function analyzeImage(imageBase64: string, text: string, selectedModelId: string, options: MessageOptions = {}) {
   const { onToken, onDone, onError, userId } = options;
-  const orKey = getStoredApiKey('openrouter');
-  const groqKey = getStoredApiKey('groq');
   
-  // Supremacy Vision Engine - Automatically used in background for all images
   const VISION_FALLBACKS = [
-    { provider: 'openrouter', model: 'qwen/qwen-2.5-vl-72b-instruct' }, // PRIMARY BEAST
-    { provider: 'groq', model: 'llama-3.2-11b-vision-preview' },       // SUPREME SPEED (ZERO COST)
+    { provider: 'openrouter', model: 'qwen/qwen-2.5-vl-72b-instruct' },
+    { provider: 'groq', model: 'llama-3.2-11b-vision-preview' },
     { provider: 'openrouter', model: 'google/gemini-pro-1.5' },
   ];
 
   let attempts = [];
-  // FORCE QWEN 2.5 VL AS PRIMARY BEAST FOR ALL VISION
   attempts.push({ provider: 'openrouter', model: 'qwen/qwen-2.5-vl-72b-instruct' });
   
-    if (selectedModelId.includes('vision') && selectedModelId !== 'qwen/qwen-2.5-vl-72b-instruct') {
-      if (selectedModelId.includes('groq')) attempts.push({ provider: 'groq', model: selectedModelId });
-      else attempts.push({ provider: 'openrouter', model: selectedModelId });
-    }
+  if (selectedModelId.includes('vision') && selectedModelId !== 'qwen/qwen-2.5-vl-72b-instruct') {
+    if (selectedModelId.includes('groq')) attempts.push({ provider: 'groq', model: selectedModelId });
+    else attempts.push({ provider: 'openrouter', model: selectedModelId });
+  }
   
   VISION_FALLBACKS.forEach(f => {
     if (!attempts.find(a => a.model === f.model)) attempts.push(f);
   });
 
-  let errorLogs: string[] = [];
-  
   for (const attempt of attempts) {
-    const provider = attempt.provider as any;
-    const apiKey = getStoredApiKey(provider);
-    if (!apiKey) continue;
-
     try {
-      const baseUrl = provider === 'openrouter' ? OPENROUTER_BASE_URL : GROQ_BASE_URL;
-      const model = attempt.model;
+      console.log(`[JLR-AI] Proxied Vision Attempt: ${attempt.provider}/${attempt.model}`);
       
-      console.log(`[JLR-AI] Attempting ${provider} with ${model}...`);
+      const payload = {
+        model: attempt.model,
+        provider: attempt.provider,
+        messages: [
+          { role: 'system', content: getSystemPrompt() },
+          { 
+            role: 'user', 
+            content: [
+              { type: 'text', text: text || 'Analyze this image in high-density detail.' },
+              { type: 'image_url', image_url: { url: imageBase64 } }
+            ] 
+          }
+        ],
+        userId: userId
+      };
 
-      let response: Response;
-      if (provider === 'openrouter') {
-        response = await fetch(`${baseUrl}/chat/completions`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${apiKey}`,
-            'HTTP-Referer': 'http://localhost:3000'
-          },
-            body: JSON.stringify({
-              model: model,
-              messages: [
-                { role: 'system', content: getSystemPrompt() },
-                { role: 'user', content: [{ type: 'text', text: text || 'Analyze this image in extreme high-density detail (OCR + Vision Logic).' }, { type: 'image_url', image_url: { url: imageBase64 } }] }
-              ],
-              stream: true,
-              max_tokens: 2048 // [CREDIT PROTECTION]: Avoid being blocked by balance checks
-            }),
-            signal: options.signal
-          });
-      } else if (provider === 'gemini') {
-        const geminiPayload = {
-          contents: [{ parts: [{ text: text || 'Analyze this image.' }, { inline_data: { mime_type: 'image/jpeg', data: imageBase64.split(',')[1] } }] }]
-        };
-        response = await fetch(`${baseUrl}/${model}:streamGenerateContent?alt=sse&key=${apiKey}`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(geminiPayload),
-          signal: options.signal
-        });
-      } else {
-        response = await fetch(`${baseUrl}/chat/completions`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
-          body: JSON.stringify({
-            model: model,
-            messages: [{ role: 'user', content: [{ type: 'text', text: text || 'Explain image' }, { type: 'image_url', image_url: { url: imageBase64 } }] }],
-            stream: true
-          }),
-          signal: options.signal
-        });
+      const response = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+        signal: options.signal,
+      });
+
+      if (!response.ok) {
+        continue;
       }
 
       const reader = response.body!.getReader();
@@ -257,29 +226,16 @@ export async function analyzeImage(imageBase64: string, text: string, selectedMo
         const { done, value } = await reader.read();
         if (done) break;
         const raw = decoder.decode(value);
-        if (provider === 'gemini') {
-          const lines = raw.split('\n');
-          for (const line of lines) {
-            if (line.startsWith('data: ')) {
-              try {
-                const json = JSON.parse(line.slice(6));
-                const content = json.candidates?.[0]?.content?.parts?.[0]?.text;
-                if (content) { fullText += content; onToken && onToken(content); }
-              } catch {}
-            }
-          }
-        } else {
-          const lines = raw.split('\n');
-          for (const line of lines) {
-            if (line.startsWith('data: ')) {
-              const data = line.slice(6).trim();
-              if (data === '[DONE]') break;
-              try {
-                const parsed = JSON.parse(data);
-                const content = parsed.choices?.[0]?.delta?.content;
-                if (content) { fullText += content; onToken && onToken(content); }
-              } catch {}
-            }
+        const lines = raw.split('\n');
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            const data = line.slice(6).trim();
+            if (data === '[DONE]') break;
+            try {
+              const parsed = JSON.parse(data);
+              const content = parsed.choices?.[0]?.delta?.content;
+              if (content) { fullText += content; onToken && onToken(content); }
+            } catch {}
           }
         }
       }
@@ -287,9 +243,9 @@ export async function analyzeImage(imageBase64: string, text: string, selectedMo
       return; 
     } catch (err: any) {
       if (err.name === 'AbortError') return;
-      console.error(`[JLR-AI] Provider ${attempt.provider} failed:`, err.message);
+      console.error(`[JLR-AI] Proxy node error:`, err.message);
     }
   }
 
-  onError && onError(`⚠️ JLR AI Supremacy: Vision Link Saturated.\n\nAll intelligence cores are currently processing at full capacity. Please standby for link restoration... ⚡`);
+  onError && onError(`⚠️ JLR AI Supremacy: Vision Link Saturated. Standby for link restoration... ⚡`);
 }

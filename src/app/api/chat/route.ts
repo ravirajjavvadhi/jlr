@@ -8,7 +8,8 @@ const OPENROUTER_BASE_URL = 'https://openrouter.ai/api/v1';
 
 export async function POST(req: NextRequest) {
   try {
-    const { messages, model, provider, fileContext, userId } = await req.json();
+    const body = await req.json();
+    const { messages, model, provider, fileContext, userId } = body;
 
     // [SUPREMACY FAILOVER]: Parse list of keys for rotation
     let groqKeysRaw = process.env.GROQ_API_KEY || process.env.NEXT_PUBLIC_GROQ_API_KEY || '';
