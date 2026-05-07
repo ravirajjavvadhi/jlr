@@ -2,10 +2,11 @@
 
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Zap, Mail, User, Lock, ArrowRight } from 'lucide-react';
+import { X, Zap, User, Lock, ArrowRight } from 'lucide-react';
 import { useAuth } from '@/services/authContext';
 
-export default function AuthScreen() {
+export default function AuthScreen({ onClose }: { onClose?: () => void }) {
+
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -24,11 +25,13 @@ export default function AuthScreen() {
       } else {
         await signup(email, password);
       }
+      if (onClose) onClose();
     } catch (err: any) {
       setError(err.message || 'AUTHENTICATION FAILED');
       setLoading(false);
     }
   };
+
 
   return (
     <div style={{ height: '100vh', width: '100vw', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem', background: '#020202' }}>
@@ -40,6 +43,15 @@ export default function AuthScreen() {
       >
         <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '2px', background: 'var(--accent-gradient)', opacity: 0.5 }} />
         
+        {onClose && (
+          <button 
+            onClick={onClose}
+            style={{ position: 'absolute', top: '1.25rem', right: '1.25rem', background: 'transparent', border: 'none', color: 'rgba(255,255,255,0.3)', cursor: 'pointer', zIndex: 10 }}
+          >
+            <X size={20} />
+          </button>
+        )}
+
         <div style={{ textAlign: 'center', marginBottom: '2.5rem' }}>
           <motion.div 
             animate={{ rotate: 360 }}

@@ -538,6 +538,19 @@ export default function AppMain() {
         </div>
       </main>
 
+      <AnimatePresence>
+        {showAuthModal && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(10px)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+          >
+            <AuthScreen onClose={() => setShowAuthModal(false)} />
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <style jsx>{`
         .sidebar-item:hover .action-btn { opacity: 1; }
         .sidebar-item:hover .stylish-delete:hover { color: #ff4d4d; }

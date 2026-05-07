@@ -135,10 +135,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // [SUPREMACY SHIFT] - Always create locally first for instant response
     const tempId = `session_${Date.now()}`;
     const newChat = { id: tempId, ...chatData };
-    const updated = [newChat, ...chats];
-    setChats(updated);
-    saveGuestChats(updated);
+    setChats(prev => {
+      const updated = [newChat, ...prev];
+      saveGuestChats(updated);
+      return updated;
+    });
     setCurrentChatId(tempId);
+
 
     if (user && !user.isGuest) {
       fetch('/api/db/chats', {
@@ -151,37 +154,47 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
 
   const updateChatMessages = async (chatId: string, messages: any[]) => {
-    const updated = chats.map(c => c.id === chatId ? { ...c, messages, updatedAt: Date.now() } : c);
-    setChats(updated);
-    saveGuestChats(updated);
-
-    if (user && !user.isGuest) {
-      const activeChat = updated.find(c => c.id === chatId);
-      fetch('/api/db/chats', {
-        method: 'POST',
-        body: JSON.stringify({ chatId, userId: user.id, title: activeChat?.title || 'New Session', messages })
-      }).catch(console.error);
-    }
+    setChats(prev => {
+      const updated = prev.map(c => c.id === chatId ? { ...c, messages, updatedAt: Date.now() } : c);
+      saveGuestChats(updated);
+      
+      if (user && !user.isGuest) {
+        const activeChat = updated.find(c => c.id === chatId);
+        fetch('/api/db/chats', {
+          method: 'POST',
+          body: JSON.stringify({ chatId, userId: user.id, title: activeChat?.title || 'New Session', messages })
+        }).catch(console.error);
+      }
+      
+      return updated;
+    });
   };
 
   const renameChat = async (chatId: string, title: string) => {
-    const updated = chats.map(c => c.id === chatId ? { ...c, title } : c);
-    setChats(updated);
-    saveGuestChats(updated);
+    setChats(prev => {
+      const updated = prev.map(c => c.id === chatId ? { ...c, title } : c);
+      saveGuestChats(updated);
 
-    if (user && !user.isGuest) {
-      const activeChat = updated.find(c => c.id === chatId);
-      fetch('/api/db/chats', {
-        method: 'POST',
-        body: JSON.stringify({ chatId, userId: user.id, title, messages: activeChat?.messages || [] })
-      }).catch(console.error);
-    }
+      if (user && !user.isGuest) {
+        const activeChat = updated.find(c => c.id === chatId);
+        fetch('/api/db/chats', {
+          method: 'POST',
+          body: JSON.stringify({ chatId, userId: user.id, title, messages: activeChat?.messages || [] })
+        }).catch(console.error);
+      }
+      return updated;
+    });
   };
 
+
+
   const deleteChat = async (chatId: string) => {
-    const updated = chats.filter(c => c.id !== chatId);
-    setChats(updated);
-    saveGuestChats(updated);
+    setChats(prev => {
+      const updated = prev.filter(c => c.id !== chatId);
+      saveGuestChats(updated);
+      return updated;
+    });
+
     if (user && !user.isGuest) {
       fetch(`/api/db/chats?chatId=${chatId}`, { method: 'DELETE' }).catch(console.error);
     }
