@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { sql } from '@/services/postgres';
 
-export const runtime = 'edge'; // Use Edge for fast streaming
+export const maxDuration = 60; // Extend to 60s for vision reasoning
 
 const GROQ_BASE_URL = 'https://api.groq.com/openai/v1';
 const OPENROUTER_BASE_URL = 'https://openrouter.ai/api/v1';

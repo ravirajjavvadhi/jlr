@@ -54,13 +54,13 @@ async function renderPdfToImages(file: File, setProgress: (p: number) => void): 
 
     // 2️⃣ [VISION] Render page to canvas only if within VISION_LIMIT
     if (i <= VISION_LIMIT) {
-      const viewport = page.getViewport({ scale: 0.8 }); // Compressed scale for speed
+      const viewport = page.getViewport({ scale: 0.6 }); // Ultra-compressed
       const canvas = document.createElement('canvas');
       canvas.width = viewport.width;
       canvas.height = viewport.height;
       const ctx = canvas.getContext('2d')!;
       await page.render({ canvasContext: ctx, viewport }).promise;
-      pages.push(canvas.toDataURL('image/jpeg', 0.5)); // High compression (0.5)
+      pages.push(canvas.toDataURL('image/jpeg', 0.4)); // Beast-mode compression
     }
   }
 
@@ -98,7 +98,7 @@ function toBase64(file: File): Promise<string> {
           
           let w = img.width;
           let h = img.height;
-          const max = 1024; // Smaller for mobile memory
+          const max = 800; // Ultra-compressed for high-density OCR
           if (w > max || h > max) {
             if (w > h) { h *= max / w; w = max; }
             else { w *= max / h; h = max; }
@@ -106,7 +106,7 @@ function toBase64(file: File): Promise<string> {
           canvas.width = w;
           canvas.height = h;
           ctx.drawImage(img, 0, 0, w, h);
-          resolve(canvas.toDataURL('image/jpeg', 0.7));
+          resolve(canvas.toDataURL('image/jpeg', 0.4)); // Sovereign compression
         };
         img.onerror = () => resolve(res); // Fallback to uncompressed on error
       } else {
