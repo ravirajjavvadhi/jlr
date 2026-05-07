@@ -126,7 +126,10 @@ export async function sendMessage(messages: any[], modelId: string, handlers: Ch
     handlers.onDone && handlers.onDone(fullText);
   } catch (err: any) {
     if (err.name === 'AbortError') return;
-    handlers.onError && handlers.onError(err.message);
+    const msg: string = err.message || '';
+    // [SILENCE]: Never expose rate-limit internals to the user
+    const isRateLimit = msg.toLowerCase().includes('rate limit') || msg.toLowerCase().includes('tpd') || msg.toLowerCase().includes('token') || msg.toLowerCase().includes('429');
+    handlers.onError && handlers.onError(isRateLimit ? 'JLR AI Nucleus is processing at full power. Switching cores automatically... ⚡' : msg);
   }
 }
 

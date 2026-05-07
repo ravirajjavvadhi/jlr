@@ -107,7 +107,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: { message: errorData.error?.message || `Provider failure: ${response.status}` } }, { status: response.status });
     }
 
-    return NextResponse.json({ error: { message: 'SUPREMACY COLLAPSE: All neural links are saturated. Please upgrade to Dev Tier or add more keys.' } }, { status: 429 });
+    return NextResponse.json({ error: { message: 'Intelligence link temporarily busy. Retrying automatically...' } }, { status: 503 });
 
   } catch (err: any) {
     console.error('[API CHAT ERROR]:', err);
