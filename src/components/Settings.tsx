@@ -11,14 +11,21 @@ type SettingsProps = {
 
 export default function Settings({ isOpen, onClose }: SettingsProps) {
   const [userName, setUserName] = useState('');
+  const [islandEnabled, setIslandEnabled] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
 
   useEffect(() => {
     setUserName(localStorage.getItem('user_name') || 'Raviraj');
+    setIslandEnabled(localStorage.getItem('neural_island_enabled') === 'true');
   }, [isOpen]);
 
   const saveSettings = () => {
     localStorage.setItem('user_name', userName);
+    localStorage.setItem('neural_island_enabled', islandEnabled.toString());
+    
+    // Dispatch custom event for instant cross-component sync
+    window.dispatchEvent(new CustomEvent('neural-island-toggle'));
+    
     setIsSaved(true);
     setTimeout(() => {
       setIsSaved(false);
@@ -70,12 +77,38 @@ export default function Settings({ isOpen, onClose }: SettingsProps) {
                 </div>
               </section>
 
+              <section>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <div>
+                    <label style={{ fontSize: '0.65rem', fontWeight: 900, opacity: 0.5, letterSpacing: '1.5px', textTransform: 'uppercase' }}>Neural Island Overlay</label>
+                    <p style={{ fontSize: '0.6rem', opacity: 0.4, marginTop: '2px' }}>Floating intelligence for mobile</p>
+                  </div>
+                  <div 
+                    onClick={() => setIslandEnabled(!islandEnabled)}
+                    style={{ 
+                      width: '40px', 
+                      height: '22px', 
+                      background: islandEnabled ? 'var(--accent-beast)' : 'rgba(255,255,255,0.1)', 
+                      borderRadius: '12px', 
+                      position: 'relative', 
+                      cursor: 'pointer',
+                      transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
+                    }}
+                  >
+                    <motion.div 
+                      animate={{ x: islandEnabled ? 20 : 2 }}
+                      style={{ width: '18px', height: '18px', background: islandEnabled ? '#000' : '#fff', borderRadius: '50%', position: 'absolute', top: 2 }}
+                    />
+                  </div>
+                </div>
+              </section>
+
               <div className="hologram-card" style={{ padding: '1rem', background: 'rgba(0, 255, 157, 0.03)', border: '1px solid rgba(0, 255, 157, 0.1)', borderRadius: '12px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.7rem', fontWeight: 900, color: 'var(--accent-beast)', marginBottom: '0.5rem' }}>
                   <Shield size={12} /> SUPREMACY CORE ACTIVE
                 </div>
                 <p style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.4)', lineHeight: 1.5 }}>
-                  API Keys are hardcoded in the codebase for global distribution. The system is currently running on the Master Power Grid.
+                  The Intelligence Overlay is optimized for mobile precision.
                 </p>
               </div>
             </div>

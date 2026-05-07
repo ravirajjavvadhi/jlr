@@ -37,31 +37,35 @@ async function renderPdfToImages(file: File, setProgress: (p: number) => void): 
 
   const pages: string[] = [];
   let combinedText = '';
-  const totalPages = Math.min(pdf.numPages, 10); // Cap at 10 pages for performance
+  const totalPages = pdf.numPages; // No artificial cap for total discovery
+  const VISION_LIMIT = 20; // Only render first 20 pages visually to save bandwidth
+  const TEXT_LIMIT = 150; // Extract text from up to 150 pages
 
-  for (let i = 1; i <= totalPages; i++) {
-    setProgress(Math.round(10 + (i / totalPages) * 80));
+  for (let i = 1; i <= Math.min(totalPages, TEXT_LIMIT); i++) {
+    setProgress(Math.round(10 + (i / Math.min(totalPages, TEXT_LIMIT)) * 80));
     const page = await pdf.getPage(i);
 
-    // Extract text from this page
+    // 1️⃣ [INTELLIGENCE] Extract text from this page
     try {
       const textContent = await page.getTextContent();
       const pageText = textContent.items.map((item: any) => item.str).join(' ');
-      combinedText += `[PAGE ${i}]\n${pageText}\n\n`;
+      combinedText += `\n--- [PAGE ${i} / ${pdf.numPages}] ---\n${pageText}\n`;
     } catch (_) { /* ignore */ }
 
-    // Render page to canvas
-    const viewport = page.getViewport({ scale: 1.5 }); // High quality
-    const canvas = document.createElement('canvas');
-    canvas.width = viewport.width;
-    canvas.height = viewport.height;
-    const ctx = canvas.getContext('2d')!;
-    await page.render({ canvasContext: ctx, viewport }).promise;
-    pages.push(canvas.toDataURL('image/jpeg', 0.85));
+    // 2️⃣ [VISION] Render page to canvas only if within VISION_LIMIT
+    if (i <= VISION_LIMIT) {
+      const viewport = page.getViewport({ scale: 0.8 }); // Compressed scale for speed
+      const canvas = document.createElement('canvas');
+      canvas.width = viewport.width;
+      canvas.height = viewport.height;
+      const ctx = canvas.getContext('2d')!;
+      await page.render({ canvasContext: ctx, viewport }).promise;
+      pages.push(canvas.toDataURL('image/jpeg', 0.5)); // High compression (0.5)
+    }
   }
 
-  if (pdf.numPages > 10) {
-    combinedText += `\n[NOTE: Document has ${pdf.numPages} pages. Showing first 10.]`;
+  if (pdf.numPages > TEXT_LIMIT) {
+    combinedText += `\n\n[SUPREMACY WARNING: Document exceeds ${TEXT_LIMIT} pages. Context truncated.]`;
   }
 
   return { pages, text: combinedText.trim() };

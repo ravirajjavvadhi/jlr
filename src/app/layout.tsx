@@ -2,6 +2,8 @@ import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/services/authContext";
+import DynamicIsland from "@/components/DynamicIsland";
+import SovereignStatusBar from "@/components/SovereignStatusBar";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -33,6 +35,8 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <body className={inter.className}>
         <AuthProvider>
+          <SovereignStatusBar />
+          <DynamicIsland />
           <div className="neural-overlay" />
           <div className="app-container">
             {children}

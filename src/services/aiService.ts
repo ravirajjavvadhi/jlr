@@ -33,6 +33,7 @@ CORE PROTOCOLS:
     3. CODE: Provide ONLY optimized code, 3 lines of technical explanation, and expected output.
 
 - STRUCTURE: Use native Markdown. Never wrap the entire response in backticks.
+- DOCUMENT INTELLIGENCE: When a file is provided, prioritize searching for specific headers (e.g., "Unit 1", "Syllabus"). Always cite page numbers (e.g., "[Page 4]") when providing answers.
 - IDENTITY: You are JLR AI. Chatting with {USER_NAME}.`;
 
 
@@ -81,7 +82,7 @@ export async function sendMessage(messages: any[], modelId: string, options: Mes
   
   // [SMART ROUTER] - Automatically allocate best model based on content
   const hasImages = messages.some(m => Array.isArray(m.content) && m.content.some((c: any) => typeof c === 'object' && c.type === 'image_url'));
-  const hasComplexDocs = !!fileContext;
+  const hasComplexDocs = !!fileContext || messages.some(m => m.attachments?.length > 0);
   
   let finalModelId = modelId;
   let finalProvider = '';
@@ -93,6 +94,7 @@ export async function sendMessage(messages: any[], modelId: string, options: Mes
     finalProvider = 'openrouter';
     finalModelId = 'deepseek/deepseek-chat'; 
   } else {
+    // Check if selected model is still valid
     const isGroqModel = modelId.includes('versatile') || modelId.includes('instant');
     finalProvider = ((isGroqModel && groqKey) ? 'groq' : (orKey ? 'openrouter' : 'groq'));
   }
@@ -102,9 +104,9 @@ export async function sendMessage(messages: any[], modelId: string, options: Mes
 
   try {
     const payload = {
-      model: finalModelId || (finalProvider === 'openrouter' ? 'deepseek/deepseek-chat' : 'llama-3.3-70b-versatile'),
+      model: finalModelId,
       messages: [
-        { role: 'system', content: systemPrompt }, 
+        { role: 'system', content: finalSystemPrompt }, 
         ...messages.map(m => ({ role: m.role, content: m.content }))
       ],
       provider: finalProvider,
