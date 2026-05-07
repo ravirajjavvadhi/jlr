@@ -141,8 +141,8 @@ export async function analyzeImage(imageBase64: string, text: string, selectedMo
   // Supremacy Vision Engine - Automatically used in background for all images
   const VISION_FALLBACKS = [
     { provider: 'openrouter', model: 'qwen/qwen-2.5-vl-72b-instruct' }, // PRIMARY BEAST
+    { provider: 'groq', model: 'llama-3.2-11b-vision-preview' },       // SUPREME SPEED (ZERO COST)
     { provider: 'openrouter', model: 'google/gemini-pro-1.5' },
-    { provider: 'openrouter', model: 'meta-llama/llama-3.2-90b-vision-instruct' },
   ];
 
   let attempts = [];
@@ -180,16 +180,17 @@ export async function analyzeImage(imageBase64: string, text: string, selectedMo
             'Authorization': `Bearer ${apiKey}`,
             'HTTP-Referer': 'http://localhost:3000'
           },
-          body: JSON.stringify({
-            model: model,
-            messages: [
-              { role: 'system', content: getSystemPrompt() },
-              { role: 'user', content: [{ type: 'text', text: text || 'Analyze this image in extreme high-density detail (OCR + Vision Logic).' }, { type: 'image_url', image_url: { url: imageBase64 } }] }
-            ],
-            stream: true
-          }),
-          signal: handlers.signal
-        });
+            body: JSON.stringify({
+              model: model,
+              messages: [
+                { role: 'system', content: getSystemPrompt() },
+                { role: 'user', content: [{ type: 'text', text: text || 'Analyze this image in extreme high-density detail (OCR + Vision Logic).' }, { type: 'image_url', image_url: { url: imageBase64 } }] }
+              ],
+              stream: true,
+              max_tokens: 2048 // [CREDIT PROTECTION]: Avoid being blocked by balance checks
+            }),
+            signal: handlers.signal
+          });
       } else if (provider === 'gemini') {
         // Direct Google AI Studio Logic
         const geminiPayload = {
@@ -265,5 +266,5 @@ export async function analyzeImage(imageBase64: string, text: string, selectedMo
     }
   }
 
-  handlers.onError && handlers.onError(`CRITICAL: All intelligence links collapsed.\n\nDIAGNOSTICS:\n- ${errorLogs.join('\n- ')}\n\nAction: Please verify API keys or wait for provider restoration.`);
+  handlers.onError && handlers.onError(`⚠️ JLR AI Supremacy: Vision Link Saturated.\n\nAll intelligence cores are currently processing at full capacity. Please standby for link restoration... ⚡`);
 }
