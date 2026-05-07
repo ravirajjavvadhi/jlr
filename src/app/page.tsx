@@ -66,7 +66,9 @@ export default function AppMain() {
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState('');
   const [showAuthModal, setShowAuthModal] = useState(false);
+  const [localMessages, setLocalMessages] = useState<any[]>([]);
   const scrollRef = useRef<HTMLDivElement>(null);
+
 
   const abortControllerRef = useRef<AbortController | null>(null);
 
@@ -84,7 +86,16 @@ export default function AppMain() {
   }, []);
 
   const currentChat = chats.find(c => c.id === currentChatId);
-  const messages = currentChat?.messages || [];
+
+  // [SUPREMACY SYNC] - Keep local UI in sync with backend when not active
+  useEffect(() => {
+    if (!isLoading && currentChat) {
+      setLocalMessages(currentChat.messages || []);
+    } else if (!currentChatId) {
+      setLocalMessages([]);
+    }
+  }, [currentChatId, chats, isLoading]);
+
 
   const scrollToBottom = useCallback((smooth = false) => { 
     if (scrollRef.current) {
@@ -97,8 +108,8 @@ export default function AppMain() {
 
   useEffect(() => { 
     // Use instant scroll during loading/streaming
-    scrollToBottom(messages.length > 0 && !isLoading); 
-  }, [messages, scrollToBottom, isLoading]);
+    scrollToBottom(localMessages.length > 0 && !isLoading); 
+  }, [localMessages, scrollToBottom, isLoading]);
 
   // Auto-close Auth portal when user successfully logs in
   useEffect(() => {
@@ -132,14 +143,16 @@ export default function AppMain() {
       chatId = await createNewChat();
     }
 
-    // [SUPREMACY FIX] - Use local state for messages during active session to avoid sync lag
+    // [SUPREMACY FIX] - Use local state for localMessages during active session to avoid sync lag
+    // [SUPREMACY FIX] - Use local state for localMessages during active session to avoid sync lag
     const userMessage = { id: Date.now().toString(), role: 'user', content: input, attachments: files.map(f => ({ name: f.name, type: f.type })) };
-    const baseMessages = chatId === currentChatId ? messages : [];
+    const baseMessages = chatId === currentChatId ? localMessages : [];
     const updatedMessages = [...baseMessages, userMessage];
     
     // Update both local state and persistent storage
-    setMessages(updatedMessages);
+    setLocalMessages(updatedMessages);
     updateChatMessages(chatId, updatedMessages);
+
 
 
     const originalInput = input;
@@ -159,9 +172,10 @@ export default function AppMain() {
         content: `⚠️ **SYSTEM ERROR:** ${error}\n\n*Check your API key in Settings.*`,
         isError: true
       };
-      setMessages(prev => [...prev.filter(m => m.id !== aiMessageId), errorMsg]);
+      setLocalMessages(prev => [...prev.filter(m => m.id !== aiMessageId), errorMsg]);
       updateChatMessages(chatId!, [...updatedMessages, errorMsg]);
     };
+
 
 
     try {
@@ -174,7 +188,7 @@ export default function AppMain() {
         await analyzeImage(imgFile.data, originalInput, selectedModel, {
           signal: abortControllerRef.current!.signal,
           onChunk: (chunk, full) => { fullResponse = full; updateChatMessages(chatId!, [...updatedMessages, { id: aiMessageId, role: 'assistant', content: full }]); },
-          onDone: () => { setIsLoading(false); if (messages.length === 0) autoGenerateTitle(chatId!, originalInput, fullResponse); },
+          onDone: () => { setIsLoading(false); if (localMessages.length === 0) autoGenerateTitle(chatId!, originalInput, fullResponse); },
           onError: handleError
         });
 
@@ -189,7 +203,8 @@ export default function AppMain() {
         await analyzeImage(allPages[0], finalPrompt, selectedModel, {
           signal: abortControllerRef.current!.signal,
           onChunk: (chunk, full) => { fullResponse = full; updateChatMessages(chatId!, [...updatedMessages, { id: aiMessageId, role: 'assistant', content: full }]); },
-          onDone: () => { setIsLoading(false); if (messages.length === 0) autoGenerateTitle(chatId!, originalInput, fullResponse); },
+          onDone: () => { setIsLoading(false); if (localMessages.length === 0) autoGenerateTitle(chatId!, originalInput, fullResponse); },
+
           onError: handleError
         });
 
@@ -200,10 +215,11 @@ export default function AppMain() {
           onChunk: (chunk, full) => { 
             fullResponse = full; 
             const newAiMsg = { id: aiMessageId, role: 'assistant', content: full };
-            setMessages(prev => [...prev.filter(m => m.id !== aiMessageId), newAiMsg]);
+            setLocalMessages((prev: any[]) => [...prev.filter((m: any) => m.id !== aiMessageId), newAiMsg]);
             // Debounced background sync
             if (full.length % 20 === 0) updateChatMessages(chatId!, [...updatedMessages, newAiMsg]); 
           },
+
           onDone: () => { 
             setIsLoading(false); 
             updateChatMessages(chatId!, [...updatedMessages, { id: aiMessageId, role: 'assistant', content: fullResponse }]);
@@ -349,7 +365,7 @@ export default function AppMain() {
 
         <div className="chat-scroll" ref={scrollRef} style={{ flex: 1, overflowY: 'auto' }}>
           <div className="chat-container" style={{ maxWidth: '850px', margin: '0 auto', padding: isMobile ? '1rem 1rem 220px 1rem' : '3rem 1.5rem 180px 1.5rem' }}>
-            {messages.length === 0 ? (
+            {localMessages.length === 0 ? (
               <div style={{ height: '55vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '2.5rem', opacity: 0.6 }}>
                 <motion.div animate={{ scale: [1, 1.15, 1], rotate: [0, 5, -5, 0] }} transition={{ duration: 4, repeat: Infinity }} style={{ width: '80px', height: '80px', background: 'var(--accent-gradient)', borderRadius: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 0 50px rgba(0, 242, 254, 0.4)' }}>
                   <Zap size={40} fill="black" />
@@ -357,7 +373,8 @@ export default function AppMain() {
                 <h1 className="text-beast" style={{ fontSize: isMobile ? '1.5rem' : '2.5rem', letterSpacing: isMobile ? '4px' : '8px', textAlign: 'center' }}>DEPLOY INTELLIGENCE</h1>
               </div>
             ) : (
-              messages.map(msg => (
+              localMessages.map((msg: any) => (
+
                 <div key={msg.id} className={`message ${msg.role}`} style={{ marginBottom: '3.5rem' }}>
                   <div style={{ display: 'flex', gap: '1.5rem' }}>
                     <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: msg.role === 'assistant' ? 'var(--beast-gradient)' : 'rgba(255,255,255,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
