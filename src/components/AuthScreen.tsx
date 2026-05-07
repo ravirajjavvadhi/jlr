@@ -99,7 +99,7 @@ export default function AuthScreen() {
             <input 
               type="email"
               required
-              placeholder="NETWORK EMAIL"
+              placeholder="IDENTITY NODE (EMAIL)"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               className="liquid-input"
@@ -112,7 +112,7 @@ export default function AuthScreen() {
             <input 
               type="password"
               required
-              placeholder="ACCESS KEY"
+              placeholder="SUPREMACY KEY (PASSWORD)"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               className="liquid-input"
@@ -120,10 +120,12 @@ export default function AuthScreen() {
             />
           </div>
 
+
           <button className="btn-beast" type="submit" disabled={loading} style={{ width: '100%', padding: '0.9rem', marginTop: '0.5rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.75rem', letterSpacing: '2px', fontSize: '0.75rem' }}>
-            {loading ? 'SYNCHRONIZING...' : (isLogin ? 'IDENTITY INITIATION' : 'NEW REGISTRATION')}
+            {loading ? 'INITIATING...' : (isLogin ? 'ACTIVATE NODE' : 'ESTABLISH ARCHIVE')}
             {!loading && <ArrowRight size={16} />}
           </button>
+
         </form>
 
         <div style={{ margin: '1.5rem 0', display: 'flex', alignItems: 'center', gap: '1rem' }}>

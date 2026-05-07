@@ -107,7 +107,9 @@ export default function AppMain() {
     }
   }, [user]);
 
-  if (showAuthModal || !user) return <AuthScreen />;
+  // [ULTRA SUPREMACY] - No more mandatory auth or loading screens.
+  // The portal is now wide open.
+
 
 
   // if (!user) return <AuthScreen />; (REMOVED - Guest mode enabled)
@@ -130,13 +132,15 @@ export default function AppMain() {
       chatId = await createNewChat();
     }
 
+    // [SUPREMACY FIX] - Use local state for messages during active session to avoid sync lag
     const userMessage = { id: Date.now().toString(), role: 'user', content: input, attachments: files.map(f => ({ name: f.name, type: f.type })) };
-    
-    // Use fresh messages list to avoid stale state issues on first message
-    const baseMessages = currentChatId ? messages : [];
+    const baseMessages = chatId === currentChatId ? messages : [];
     const updatedMessages = [...baseMessages, userMessage];
     
-    await updateChatMessages(chatId, updatedMessages);
+    // Update both local state and persistent storage
+    setMessages(updatedMessages);
+    updateChatMessages(chatId, updatedMessages);
+
 
     const originalInput = input;
     setInput('');
@@ -149,13 +153,16 @@ export default function AppMain() {
 
     const handleError = (error: string) => {
       setIsLoading(false);
-      updateChatMessages(chatId!, [...updatedMessages, { 
+      const errorMsg = { 
         id: aiMessageId, 
         role: 'assistant', 
-        content: `⚠️ **SYSTEM ERROR:** ${error}\n\n*Please verify your API key or model availability in Settings.*`,
+        content: `⚠️ **SYSTEM ERROR:** ${error}\n\n*Check your API key in Settings.*`,
         isError: true
-      }]);
+      };
+      setMessages(prev => [...prev.filter(m => m.id !== aiMessageId), errorMsg]);
+      updateChatMessages(chatId!, [...updatedMessages, errorMsg]);
     };
+
 
     try {
       let fullResponse = '';
@@ -190,11 +197,22 @@ export default function AppMain() {
         const docContext = currentFiles.filter(f => f.type === 'document').map(f => f.data).join('\n\n---\n\n');
         await sendMessage(updatedMessages, selectedModel, {
           signal: abortControllerRef.current!.signal,
-          onChunk: (chunk, full) => { fullResponse = full; updateChatMessages(chatId!, [...updatedMessages, { id: aiMessageId, role: 'assistant', content: full }]); },
-          onDone: () => { setIsLoading(false); if (messages.length === 0) autoGenerateTitle(chatId!, originalInput, fullResponse); },
+          onChunk: (chunk, full) => { 
+            fullResponse = full; 
+            const newAiMsg = { id: aiMessageId, role: 'assistant', content: full };
+            setMessages(prev => [...prev.filter(m => m.id !== aiMessageId), newAiMsg]);
+            // Debounced background sync
+            if (full.length % 20 === 0) updateChatMessages(chatId!, [...updatedMessages, newAiMsg]); 
+          },
+          onDone: () => { 
+            setIsLoading(false); 
+            updateChatMessages(chatId!, [...updatedMessages, { id: aiMessageId, role: 'assistant', content: fullResponse }]);
+            if (updatedMessages.length <= 1) autoGenerateTitle(chatId!, originalInput, fullResponse); 
+          },
           onError: handleError
         }, docContext || undefined);
       }
+
     } catch (e: any) { handleError(e.message); }
   };
 
