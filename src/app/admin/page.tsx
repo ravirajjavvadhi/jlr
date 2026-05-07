@@ -16,8 +16,11 @@ export default function AdminDashboard() {
   // [SECURITY BLOCK]: Absolute Authority Check
   useEffect(() => {
     if (!user || user.username !== 'raviraj') {
-      router.push('/');
-      return;
+      // Small delay to allow auth state to resolve
+      const timer = setTimeout(() => {
+        if (!user || user.username !== 'raviraj') router.push('/');
+      }, 1000);
+      return () => clearTimeout(timer);
     }
     fetchUsers();
   }, [user]);
@@ -29,10 +32,9 @@ export default function AdminDashboard() {
       if (data.users) {
         setUsers(data.users);
       } else if (data.error) {
-        setStatus({ type: 'error', msg: `System Diagnostic: ${data.error}` });
+        setStatus({ type: 'error', msg: `Diagnostic: ${data.error}` });
       }
     } catch (e: any) {
-      console.error(e);
       setStatus({ type: 'error', msg: `Link Failure: ${e.message}` });
     } finally {
       setLoading(false);
@@ -54,7 +56,7 @@ export default function AdminDashboard() {
       });
       const data = await res.json();
       if (data.success) {
-        setStatus({ type: 'success', msg: `Node ${userId.slice(0, 5)}... Link Updated.` });
+        setStatus({ type: 'success', msg: `Neural Link for Node ${userId.slice(0, 5)}... Activated.` });
         setTimeout(() => setStatus({ type: '', msg: '' }), 3000);
       } else {
         setStatus({ type: 'error', msg: data.error });
@@ -66,82 +68,247 @@ export default function AdminDashboard() {
     }
   };
 
+  // --- STYLES (Sovereign Inline System) ---
+  const styles = {
+    container: {
+      minHeight: '100vh',
+      backgroundColor: '#0a0a0c',
+      color: '#f0f0f0',
+      fontFamily: 'system-ui, -apple-system, sans-serif',
+      padding: '40px 20px',
+    },
+    wrapper: {
+      maxWidth: '1000px',
+      margin: '0 auto',
+    },
+    header: {
+      display: 'flex',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: '60px',
+      borderBottom: '1px solid rgba(255,255,255,0.05)',
+      paddingBottom: '30px',
+    },
+    titleGroup: {
+      display: 'flex',
+      flexDirection: 'column' as const,
+    },
+    title: {
+      fontSize: '28px',
+      fontWeight: 900,
+      letterSpacing: '-1px',
+      textTransform: 'uppercase' as const,
+      margin: 0,
+      display: 'flex',
+      alignItems: 'center',
+      gap: '12px',
+      fontStyle: 'italic',
+    },
+    logoBox: {
+      width: '38px',
+      height: '38px',
+      backgroundColor: '#10b981',
+      color: '#000',
+      borderRadius: '8px',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      fontStyle: 'normal',
+      fontWeight: 900,
+      fontSize: '20px',
+      boxShadow: '0 0 20px rgba(16,185,129,0.3)',
+    },
+    subtitle: {
+      fontSize: '10px',
+      color: 'rgba(255,255,255,0.4)',
+      textTransform: 'uppercase' as const,
+      letterSpacing: '2px',
+      fontWeight: 800,
+      marginTop: '4px',
+    },
+    backButton: {
+      padding: '10px 20px',
+      borderRadius: '50px',
+      border: '1px solid rgba(255,255,255,0.1)',
+      color: '#fff',
+      textDecoration: 'none',
+      fontSize: '11px',
+      fontWeight: 800,
+      textTransform: 'uppercase' as const,
+      letterSpacing: '1px',
+      transition: 'all 0.2s',
+      backgroundColor: 'rgba(255,255,255,0.03)',
+    },
+    status: (type: string) => ({
+      padding: '15px 20px',
+      borderRadius: '12px',
+      marginBottom: '30px',
+      fontSize: '11px',
+      fontWeight: 800,
+      textTransform: 'uppercase' as const,
+      letterSpacing: '1px',
+      backgroundColor: type === 'success' ? 'rgba(16,185,129,0.1)' : 'rgba(239,68,68,0.1)',
+      border: `1px solid ${type === 'success' ? 'rgba(16,185,129,0.2)' : 'rgba(239,68,68,0.2)'}`,
+      color: type === 'success' ? '#34d399' : '#f87171',
+    }),
+    card: {
+      backgroundColor: 'rgba(255,255,255,0.02)',
+      border: '1px solid rgba(255,255,255,0.06)',
+      borderRadius: '20px',
+      padding: '30px',
+      marginBottom: '20px',
+      display: 'flex',
+      flexDirection: 'column' as const,
+      gap: '20px',
+      transition: 'border-color 0.2s',
+    },
+    cardHeader: {
+      display: 'flex',
+      justifyContent: 'space-between',
+      alignItems: 'baseline',
+    },
+    username: {
+      fontSize: '18px',
+      fontWeight: 800,
+      color: '#fff',
+    },
+    nodeId: {
+      fontSize: '10px',
+      color: 'rgba(255,255,255,0.2)',
+      textTransform: 'uppercase' as const,
+      fontWeight: 800,
+      letterSpacing: '1px',
+    },
+    meta: {
+      fontSize: '10px',
+      color: 'rgba(255,255,255,0.3)',
+      textTransform: 'uppercase' as const,
+      fontWeight: 800,
+      letterSpacing: '1.5px',
+    },
+    inputGroup: {
+      display: 'flex',
+      flexDirection: 'column' as const,
+      gap: '8px',
+    },
+    label: {
+      fontSize: '9px',
+      fontWeight: 900,
+      textTransform: 'uppercase' as const,
+      letterSpacing: '2px',
+      color: 'rgba(255,255,255,0.4)',
+    },
+    textarea: {
+      backgroundColor: '#000',
+      border: '1px solid rgba(255,255,255,0.08)',
+      borderRadius: '12px',
+      padding: '15px',
+      color: '#10b981',
+      fontSize: '12px',
+      fontFamily: 'monospace',
+      minHeight: '100px',
+      outline: 'none',
+    },
+    actions: {
+      display: 'flex',
+      gap: '12px',
+    },
+    btnUpdate: {
+      backgroundColor: '#fff',
+      color: '#000',
+      border: 'none',
+      padding: '12px 24px',
+      borderRadius: '12px',
+      fontSize: '11px',
+      fontWeight: 900,
+      textTransform: 'uppercase' as const,
+      letterSpacing: '1.5px',
+      cursor: 'pointer',
+      flex: 1,
+    },
+    btnDanger: {
+      backgroundColor: 'transparent',
+      color: 'rgba(239,68,68,0.6)',
+      border: '1px solid rgba(239,68,68,0.1)',
+      padding: '12px 24px',
+      borderRadius: '12px',
+      fontSize: '11px',
+      fontWeight: 900,
+      textTransform: 'uppercase' as const,
+      letterSpacing: '1.5px',
+      cursor: 'pointer',
+    },
+    empty: {
+      border: '1px dashed rgba(255,255,255,0.1)',
+      borderRadius: '20px',
+      padding: '60px',
+      textAlign: 'center' as const,
+    }
+  };
+
   if (loading) return (
-    <div className="min-h-screen bg-[#0a0a0c] text-white flex items-center justify-center font-sans tracking-tight">
-      <div className="animate-pulse flex flex-col items-center gap-4">
-        <div className="w-12 h-12 bg-emerald-500 rounded-full shadow-[0_0_20px_rgba(16,185,129,0.5)]"></div>
-        <p className="text-emerald-500 font-bold uppercase tracking-widest text-sm">Synchronizing Command Center...</p>
-      </div>
+    <div style={{ ...styles.container, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <p style={{ ...styles.subtitle, color: '#10b981' }}>INITIALIZING COMMAND CENTER...</p>
     </div>
   );
 
   return (
-    <div className="min-h-screen bg-[#0a0a0c] text-[#f0f0f0] font-sans p-8 selection:bg-emerald-500/30">
-      <div className="max-w-6xl mx-auto">
-        <header className="flex justify-between items-center mb-12 border-b border-white/5 pb-8">
-          <div>
-            <h1 className="text-3xl font-black tracking-tighter uppercase italic flex items-center gap-3">
-              <span className="w-10 h-10 bg-emerald-500 rounded flex items-center justify-center not-italic shadow-[0_0_15px_rgba(16,185,129,0.3)]">J</span>
+    <div style={styles.container}>
+      <div style={styles.wrapper}>
+        <header style={styles.header}>
+          <div style={styles.titleGroup}>
+            <h1 style={styles.title}>
+              <span style={styles.logoBox}>J</span>
               Supreme Command Center
             </h1>
-            <p className="text-white/40 mt-1 uppercase tracking-widest text-[10px] font-bold">Neural Node Registry & Link Allocation</p>
+            <p style={styles.subtitle}>Neural Node Registry & Link Allocation</p>
           </div>
-          <Link href="/" className="px-4 py-2 border border-white/10 rounded-full text-xs font-bold uppercase tracking-widest hover:bg-white/5 transition-all">
-            Return to Core
-          </Link>
+          <Link href="/" style={styles.backButton}>Return to Core</Link>
         </header>
 
         {status.msg && (
-          <div className={`mb-8 p-4 rounded-lg border text-xs font-bold uppercase tracking-widest ${
-            status.type === 'success' ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' : 'bg-red-500/10 border-red-500/20 text-red-400'
-          }`}>
+          <div style={styles.status(status.type)}>
             {status.msg}
           </div>
         )}
 
-        <div className="grid gap-6">
+        <div style={{ display: 'grid', gap: '24px' }}>
           {users.length === 0 ? (
-            <div className="bg-white/[0.02] border border-white/[0.05] border-dashed rounded-2xl p-12 text-center">
-              <p className="text-white/20 uppercase tracking-[0.3em] font-black text-sm">No Neural Nodes Detected</p>
-              <p className="text-white/10 text-[10px] mt-2 uppercase font-bold">Ensure users have established their identity on the platform</p>
+            <div style={styles.empty}>
+              <p style={{ ...styles.label, fontSize: '14px', color: 'rgba(255,255,255,0.2)' }}>No Neural Nodes Detected</p>
+              <p style={styles.meta}>Users must establish their identity on the platform to be visible here.</p>
             </div>
           ) : users.map(u => (
-            <div key={u.id} className="bg-white/[0.02] border border-white/[0.05] rounded-2xl p-6 hover:border-white/10 transition-all group">
-              <div className="flex flex-col md:flex-row gap-6 items-start">
-                <div className="flex-1">
-                  <div className="flex items-center gap-3 mb-2">
-                    <span className="text-xl font-bold tracking-tight text-white/90 lowercase">@{u.username}</span>
-                    <span className="px-2 py-0.5 bg-white/5 rounded text-[10px] font-bold text-white/30 uppercase tracking-widest">
-                      ID: {u.id.slice(0, 8)}...
-                    </span>
-                  </div>
-                  <p className="text-white/30 text-[10px] uppercase font-bold tracking-widest mb-4">
-                    Joined: {new Date(u.created_at).toLocaleDateString()}
-                  </p>
+            <div key={u.id} style={styles.card}>
+              <div style={styles.cardHeader}>
+                <div>
+                  <div style={styles.username}>@{u.username}</div>
+                  <div style={styles.nodeId}>Sequence ID: {u.id.slice(0, 12)}...</div>
                 </div>
+                <div style={styles.meta}>
+                  Activated: {new Date(u.created_at).toLocaleDateString()}
+                </div>
+              </div>
 
-                <div className="flex-[2] w-full">
-                  <label className="block text-[10px] uppercase font-black tracking-[0.2em] text-white/20 mb-2">Allocated Neural Links (Comma Separated Keys)</label>
-                  <textarea
-                    defaultValue={u.custom_api_key || ''}
-                    placeholder="gsk_key1, gsk_key2, gsk_key3..."
-                    onChange={(e) => u.temp_keys = e.target.value}
-                    className="w-full h-24 bg-black/40 border border-white/5 rounded-xl p-4 text-xs font-mono text-emerald-300 focus:outline-none focus:border-emerald-500/40 transition-all placeholder:text-white/5"
-                  />
-                </div>
+              <div style={styles.inputGroup}>
+                <label style={styles.label}>Dedicated Neural Keys (Comma Separated)</label>
+                <textarea
+                  style={styles.textarea}
+                  defaultValue={u.custom_api_key || ''}
+                  placeholder="Insert Link Keys (e.g., gsk_l9..., gsk_x2...)"
+                  onChange={(e) => u.temp_keys = e.target.value}
+                />
+              </div>
 
-                <div className="flex flex-col gap-3">
-                  <button
-                    onClick={() => handleUpdateKeys(u.id, u.temp_keys || u.custom_api_key || '')}
-                    disabled={updatingId === u.id}
-                    className="px-6 py-3 bg-white text-black text-xs font-black uppercase tracking-widest rounded-xl hover:bg-emerald-500 hover:text-white transition-all disabled:opacity-50"
-                  >
-                    {updatingId === u.id ? 'Updating...' : 'Update Node'}
-                  </button>
-                  <button className="px-6 py-3 border border-white/5 text-white/30 text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-red-500/10 hover:text-red-400 hover:border-red-500/20 transition-all">
-                    Deactivate
-                  </button>
-                </div>
+              <div style={styles.actions}>
+                <button 
+                  style={{ ...styles.btnUpdate, opacity: updatingId === u.id ? 0.5 : 1 }}
+                  onClick={() => handleUpdateKeys(u.id, u.temp_keys || u.custom_api_key || '')}
+                  disabled={updatingId === u.id}
+                >
+                  {updatingId === u.id ? 'SYNCHRONIZING...' : 'Establish Neural Link'}
+                </button>
+                <button style={styles.btnDanger}>Suspend Node</button>
               </div>
             </div>
           ))}
