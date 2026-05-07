@@ -187,8 +187,18 @@ export default function AppMain() {
         const imgFile = currentFiles.find(f => f.type === 'image')!;
         await analyzeImage(imgFile.data, originalInput, selectedModel, {
           signal: abortControllerRef.current!.signal,
-          onChunk: (chunk, full) => { fullResponse = full; updateChatMessages(chatId!, [...updatedMessages, { id: aiMessageId, role: 'assistant', content: full }]); },
-          onDone: () => { setIsLoading(false); if (localMessages.length === 0) autoGenerateTitle(chatId!, originalInput, fullResponse); },
+          onChunk: (chunk, full) => { 
+            fullResponse = full; 
+            const newAiMsg = { id: aiMessageId, role: 'assistant', content: full };
+            setLocalMessages((prev: any[]) => [...prev.filter((m: any) => m.id !== aiMessageId), newAiMsg]);
+            if (full.length % 20 === 0) updateChatMessages(chatId!, [...updatedMessages, newAiMsg]); 
+          },
+          onDone: () => { 
+            setIsLoading(false); 
+            updateChatMessages(chatId!, [...updatedMessages, { id: aiMessageId, role: 'assistant', content: fullResponse }]);
+            if (localMessages.length === 0) autoGenerateTitle(chatId!, originalInput, fullResponse); 
+          },
+
           onError: handleError
         });
 
@@ -202,8 +212,18 @@ export default function AppMain() {
 
         await analyzeImage(allPages[0], finalPrompt, selectedModel, {
           signal: abortControllerRef.current!.signal,
-          onChunk: (chunk, full) => { fullResponse = full; updateChatMessages(chatId!, [...updatedMessages, { id: aiMessageId, role: 'assistant', content: full }]); },
-          onDone: () => { setIsLoading(false); if (localMessages.length === 0) autoGenerateTitle(chatId!, originalInput, fullResponse); },
+          onChunk: (chunk, full) => { 
+            fullResponse = full; 
+            const newAiMsg = { id: aiMessageId, role: 'assistant', content: full };
+            setLocalMessages((prev: any[]) => [...prev.filter((m: any) => m.id !== aiMessageId), newAiMsg]);
+            if (full.length % 20 === 0) updateChatMessages(chatId!, [...updatedMessages, newAiMsg]); 
+          },
+          onDone: () => { 
+            setIsLoading(false); 
+            updateChatMessages(chatId!, [...updatedMessages, { id: aiMessageId, role: 'assistant', content: fullResponse }]);
+            if (localMessages.length === 0) autoGenerateTitle(chatId!, originalInput, fullResponse); 
+          },
+
 
           onError: handleError
         });
