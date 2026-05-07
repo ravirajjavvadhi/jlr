@@ -1,43 +1,25 @@
-"use client";
-
 import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
-import { 
-  signInWithEmailAndPassword, 
-  createUserWithEmailAndPassword, 
-  signOut, 
-  onAuthStateChanged, 
-  signInWithPopup,
-  updateProfile
-} from 'firebase/auth';
-import { 
-  doc, setDoc, getDoc, collection, 
-  onSnapshot, addDoc, updateDoc, deleteDoc,
-  serverTimestamp, orderBy, query
-} from 'firebase/firestore';
-import { auth, db, googleProvider } from './firebase';
 
 export type Chat = {
   id: string;
   title: string;
   messages: any[];
   model: string;
-  updatedAt: any;
+  updatedAt: number;
 };
 
 type User = {
   id: string;
-  name: string;
-  email: string;
-  isPro: boolean;
+  username: string;
   isGuest?: boolean;
 };
+
 
 type AuthContextType = {
   user: User | null;
   loading: boolean;
-  login: (email: string, password: string) => Promise<void>;
-  signup: (name: string, email: string, password: string) => Promise<void>;
-  loginWithGoogle: () => Promise<void>;
+  login: (username: string, supremacyKey: string) => Promise<void>;
+  signup: (username: string, supremacyKey: string) => Promise<void>;
   logout: () => void;
   chats: Chat[];
   currentChatId: string | null;
@@ -49,6 +31,7 @@ type AuthContextType = {
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
 
 // ─── Guest Local Storage helpers ────────────────────────────────────────────
 function loadGuestChats(): Chat[] {
@@ -70,110 +53,73 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const loadingRef = useRef(true);
   const firestoreUnsubRef = useRef<(() => void) | null>(null);
 
-  // ─── Auth State Observer ─────────────────────────────────────────────────
+  // ─── Identity Synchronization ──────────────────────────────────────────
   useEffect(() => {
-    const failsafe = setTimeout(() => {
-      if (loadingRef.current) {
-        console.warn("⚠️ AUTH FAILSAFE: Initialization timed out. Falling back to Guest Mode.");
-        setUser({ id: 'guest', name: 'Guest', email: '', isPro: false, isGuest: true });
-        setChats(loadGuestChats());
-        loadingRef.current = false;
-        setLoading(false);
-      }
-    }, 3000);
-
-
-    if (!auth || !db) {
-      clearTimeout(failsafe);
-      console.warn("⚠️ AUTH SHIELD: Firebase services not initialized. Running in Offline/Guest mode.");
-      setUser({ id: 'guest', name: 'Guest', email: '', isPro: false, isGuest: true });
-      setChats(loadGuestChats());
-      setLoading(false);
-      return;
-    }
-
-    const unsubAuth = onAuthStateChanged(auth, async (firebaseUser) => {
-      clearTimeout(failsafe);
+    const initIdentity = async () => {
       setLoading(true);
-
-
-
-      // Clean up old Firestore listener
-      if (firestoreUnsubRef.current) { firestoreUnsubRef.current(); firestoreUnsubRef.current = null; }
-
-      if (firebaseUser) {
-        const userRef = doc(db, 'users', firebaseUser.uid);
-        const userDoc = await getDoc(userRef);
-        const userData = userDoc.data();
-
-        setUser({
-          id: firebaseUser.uid,
-          name: firebaseUser.displayName || userData?.name || 'Commander',
-          email: firebaseUser.email || '',
-          isPro: userData?.isPro ?? true,
-          isGuest: false,
-        });
-
-        // Attach real-time Firestore listener for this user
-        const q = query(collection(db, `users/${firebaseUser.uid}/chats`), orderBy('updatedAt', 'desc'));
-        const unsub = onSnapshot(q, (snap: any) => {
-          const freshChats = snap.docs.map((d: any) => ({ id: d.id, ...d.data() } as Chat));
-          setChats(freshChats);
-          saveGuestChats(freshChats); 
-        }, (err: any) => {
-          console.error("Firestore snapshot error:", err);
-        });
-        firestoreUnsubRef.current = unsub;
-
-
-
+      const savedUser = localStorage.getItem('supremacy_session');
+      
+      if (savedUser) {
+        const u = JSON.parse(savedUser);
+        setUser(u);
+        // Load cloud chats
+        try {
+          const res = await fetch(`/api/db/chats?userId=${u.id}`);
+          if (res.ok) {
+            const data = await res.json();
+            const formatted = data.chats.map((c: any) => ({
+              id: c.id,
+              title: c.title,
+              messages: c.messages,
+              updatedAt: new Date(c.updated_at).getTime()
+            }));
+            setChats(formatted.length > 0 ? formatted : loadGuestChats());
+          }
+        } catch (e) {
+          console.warn("Cloud sync deferred. Running local.");
+          setChats(loadGuestChats());
+        }
       } else {
-        // No Firebase user — run as Guest with local storage
-        setUser({ id: 'guest', name: 'Guest', email: '', isPro: false, isGuest: true });
+        setUser({ id: 'guest', username: 'Guest', isGuest: true });
         setChats(loadGuestChats());
       }
-
-      loadingRef.current = false;
       setLoading(false);
-    });
-
-
-    return () => { 
-      clearTimeout(failsafe);
-      unsubAuth(); 
-      if (firestoreUnsubRef.current) firestoreUnsubRef.current(); 
     };
 
+    initIdentity();
   }, []);
 
+
   // ─── Auth Methods ─────────────────────────────────────────────────────────
-  const login = async (email: string, password: string) => {
-    await signInWithEmailAndPassword(auth, email, password);
-  };
-
-  const signup = async (name: string, email: string, password: string) => {
-    const cred = await createUserWithEmailAndPassword(auth, email, password);
-    await updateProfile(cred.user, { displayName: name });
-    await setDoc(doc(db, 'users', cred.user.uid), {
-      name, email, isPro: true, createdAt: serverTimestamp()
+  const login = async (username: string, supremacyKey: string) => {
+    const res = await fetch(`/api/auth?action=login`, {
+      method: 'POST',
+      body: JSON.stringify({ username, password: supremacyKey })
     });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error);
+
+    localStorage.setItem('supremacy_session', JSON.stringify(data.user));
+    window.location.reload(); // Refresh to trigger sync
   };
 
-  const loginWithGoogle = async () => {
-    const cred = await signInWithPopup(auth, googleProvider);
-    const userRef = doc(db, 'users', cred.user.uid);
-    const userDoc = await getDoc(userRef);
-    if (!userDoc.exists()) {
-      await setDoc(userRef, {
-        name: cred.user.displayName,
-        email: cred.user.email,
-        isPro: true,
-        createdAt: serverTimestamp()
-      });
-    }
+  const signup = async (username: string, supremacyKey: string) => {
+    const res = await fetch(`/api/auth?action=signup`, {
+      method: 'POST',
+      body: JSON.stringify({ username, password: supremacyKey })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error);
+
+    localStorage.setItem('supremacy_session', JSON.stringify(data.user));
+    window.location.reload();
   };
 
-  const logout = () => signOut(auth);
+  const logout = () => {
+    localStorage.removeItem('supremacy_session');
+    window.location.reload();
+  };
+
 
   // ─── Chat Actions ─────────────────────────────────────────────────────────
   const createNewChat = async (): Promise<string> => {
@@ -185,75 +131,70 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
 
     // [SUPREMACY SHIFT] - Always create locally first for instant response
-    const tempId = (!user || user.isGuest || !db) ? `guest_${Date.now()}` : `sync_${Date.now()}`;
+    const tempId = `session_${Date.now()}`;
     const newChat = { id: tempId, ...chatData };
     const updated = [newChat, ...chats];
     setChats(updated);
     saveGuestChats(updated);
     setCurrentChatId(tempId);
 
-    if (!user || user.isGuest || !db) return tempId;
-
-
-    try {
-      const ref = await addDoc(collection(db, `users/${user.id}/chats`), {
-        ...chatData, updatedAt: serverTimestamp()
-      });
-      // Replace temp ID with real ID in background if needed
-      return ref.id;
-    } catch (e) {
-      console.warn("Firebase sync failed, session remains local.");
-      return tempId;
+    if (user && !user.isGuest) {
+      fetch('/api/db/chats', {
+        method: 'POST',
+        body: JSON.stringify({ chatId: tempId, userId: user.id, title: chatData.title, messages: [] })
+      }).catch(console.error);
     }
+    return tempId;
   };
 
 
   const updateChatMessages = async (chatId: string, messages: any[]) => {
-    if (user?.isGuest || !db) {
-      const updated = chats.map(c => c.id === chatId ? { ...c, messages, updatedAt: Date.now() } : c);
+    const updated = chats.map(c => c.id === chatId ? { ...c, messages, updatedAt: Date.now() } : c);
+    setChats(updated);
+    saveGuestChats(updated);
 
-      setChats(updated);
-      saveGuestChats(updated);
-      return;
+    if (user && !user.isGuest) {
+      const activeChat = updated.find(c => c.id === chatId);
+      fetch('/api/db/chats', {
+        method: 'POST',
+        body: JSON.stringify({ chatId, userId: user.id, title: activeChat?.title || 'New Session', messages })
+      }).catch(console.error);
     }
-    if (!user) return;
-    await updateDoc(doc(db, `users/${user.id}/chats`, chatId), { messages, updatedAt: serverTimestamp() });
   };
 
   const renameChat = async (chatId: string, title: string) => {
-    if (user?.isGuest || !db) {
-      const updated = chats.map(c => c.id === chatId ? { ...c, title } : c);
+    const updated = chats.map(c => c.id === chatId ? { ...c, title } : c);
+    setChats(updated);
+    saveGuestChats(updated);
 
-      setChats(updated);
-      saveGuestChats(updated);
-      return;
+    if (user && !user.isGuest) {
+      const activeChat = updated.find(c => c.id === chatId);
+      fetch('/api/db/chats', {
+        method: 'POST',
+        body: JSON.stringify({ chatId, userId: user.id, title, messages: activeChat?.messages || [] })
+      }).catch(console.error);
     }
-    if (!user) return;
-    await updateDoc(doc(db, `users/${user.id}/chats`, chatId), { title, updatedAt: serverTimestamp() });
   };
 
   const deleteChat = async (chatId: string) => {
-    if (user?.isGuest || !db) {
-      const updated = chats.filter(c => c.id !== chatId);
-
-      setChats(updated);
-      saveGuestChats(updated);
-      if (currentChatId === chatId) setCurrentChatId(null);
-      return;
+    const updated = chats.filter(c => c.id !== chatId);
+    setChats(updated);
+    saveGuestChats(updated);
+    if (user && !user.isGuest) {
+      fetch(`/api/db/chats?chatId=${chatId}`, { method: 'DELETE' }).catch(console.error);
     }
-    if (!user) return;
-    await deleteDoc(doc(db, `users/${user.id}/chats`, chatId));
     if (currentChatId === chatId) setCurrentChatId(null);
   };
 
   return (
     <AuthContext.Provider value={{
-      user, loading, login, signup, loginWithGoogle, logout,
+      user, loading, login, signup, logout,
       chats, currentChatId, setCurrentChatId,
       createNewChat, updateChatMessages, renameChat, deleteChat
     }}>
       {children}
     </AuthContext.Provider>
+
   );
 };
 

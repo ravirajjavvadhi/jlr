@@ -9,8 +9,8 @@ export default function AuthScreen() {
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [name, setName] = useState('');
-  const { login, signup, loginWithGoogle } = useAuth();
+  const { login, signup } = useAuth();
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -22,21 +22,10 @@ export default function AuthScreen() {
       if (isLogin) {
         await login(email, password);
       } else {
-        await signup(name, email, password);
+        await signup(email, password);
       }
     } catch (err: any) {
-      setError(err.message.replace('Firebase: ', ''));
-      setLoading(false);
-    }
-  };
-
-  const handleGoogle = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      await loginWithGoogle();
-    } catch (err: any) {
-      setError(err.message.replace('Firebase: ', ''));
+      setError(err.message || 'AUTHENTICATION FAILED');
       setLoading(false);
     }
   };
@@ -70,36 +59,12 @@ export default function AuthScreen() {
         )}
 
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-          <AnimatePresence mode="wait">
-            {!isLogin && (
-              <motion.div 
-                key="name"
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: 'auto' }}
-                exit={{ opacity: 0, height: 0 }}
-              >
-                <div style={{ position: 'relative' }}>
-                  <User size={16} style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', opacity: 0.3 }} />
-                  <input 
-                    type="text"
-                    required
-                    placeholder="CIVILIAN NAME"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    className="liquid-input"
-                    style={{ width: '100%', paddingLeft: '3rem', fontSize: '0.75rem', fontWeight: 700 }}
-                  />
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-
           <div style={{ position: 'relative' }}>
-            <Mail size={16} style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', opacity: 0.3 }} />
+            <User size={16} style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', opacity: 0.3 }} />
             <input 
-              type="email"
+              type="text"
               required
-              placeholder="IDENTITY NODE (EMAIL)"
+              placeholder="IDENTITY NAME (USERNAME)"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               className="liquid-input"
@@ -128,22 +93,6 @@ export default function AuthScreen() {
 
         </form>
 
-        <div style={{ margin: '1.5rem 0', display: 'flex', alignItems: 'center', gap: '1rem' }}>
-          <div style={{ flex: 1, height: '1px', background: 'rgba(255,255,255,0.1)' }} />
-          <span style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.2)', fontWeight: 800 }}>OR</span>
-          <div style={{ flex: 1, height: '1px', background: 'rgba(255,255,255,0.1)' }} />
-        </div>
-
-        <button 
-          onClick={handleGoogle}
-          disabled={loading}
-          style={{ width: '100%', padding: '0.8rem', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', color: '#fff', fontSize: '0.7rem', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.75rem', transition: 'all 0.2s' }}
-          className="hover-glow"
-        >
-          <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/action/google.svg" width="16" alt="G" />
-          CONTINUE WITH GOOGLE
-        </button>
-
         <div style={{ textAlign: 'center', marginTop: '2rem' }}>
           <button 
             onClick={() => setIsLogin(!isLogin)}
@@ -154,6 +103,7 @@ export default function AuthScreen() {
         </div>
       </motion.div>
     </div>
+
   );
 }
 

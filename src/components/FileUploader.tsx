@@ -122,10 +122,9 @@ export default function FileUploader({ onFilesChange, files, showButton = true, 
   const { user } = useAuth();
   
   const onDrop = useCallback(async (acceptedFiles: File[]) => {
-    if (!user || user.id === 'guest') {
-      alert("IDENTITY REQUIRED: Please sign in to analyze images and documents.");
-      return;
-    }
+    // [SUPREMACY FIX] - Allow Guests to analyze files (saved to local cache)
+    // if (!user || user.id === 'guest') { ... }
+
 
     setIsProcessing(true);
     const newFiles: FileData[] = [];
