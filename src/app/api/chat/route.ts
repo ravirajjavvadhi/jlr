@@ -35,28 +35,31 @@ export async function POST(req: NextRequest) {
     let currentModel = model;
     let currentProvider = provider;
     
-    // [SUPREMACY CONTEXT]: Restore document injection
+    // [SUPREMACY CONTEXT]
     let finalMessages = [...messages];
     if (fileContext) {
       const systemMsg = finalMessages.find(m => m.role === 'system');
-      if (systemMsg) {
-        systemMsg.content += `\n\n[ATTACHED CONTEXT]:\n${fileContext}`;
-      } else {
-        finalMessages.unshift({ role: 'system', content: `[ATTACHED CONTEXT]:\n${fileContext}` });
+      if (systemMsg) systemMsg.content += `\n\n[ATTACHED CONTEXT]:\n${fileContext}`;
+      else finalMessages.unshift({ role: 'system', content: `[ATTACHED CONTEXT]:\n${fileContext}` });
+    }
+
+    const maxTotalAttempts = (groqKeys.length + orKeys.length) * 2;
+    let totalAttempts = 0;
+
+    while (totalAttempts < maxTotalAttempts) {
+      // Determine active provider/keys/baseUrl for this specific attempt
+      const activeKeys = currentProvider === 'openrouter' ? orKeys : groqKeys;
+      const baseUrl = currentProvider === 'openrouter' ? OPENROUTER_BASE_URL : GROQ_BASE_URL;
+      const apiKey = activeKeys[totalAttempts % (activeKeys.length || 1)];
+
+      if (!apiKey) {
+        // Switch provider if current one is exhausted
+        currentProvider = currentProvider === 'groq' ? 'openrouter' : 'groq';
+        totalAttempts++;
+        continue;
       }
-    }
 
-    let attempts = 0;
-    const keys = currentProvider === 'openrouter' ? orKeys : groqKeys;
-    const baseUrl = currentProvider === 'openrouter' ? OPENROUTER_BASE_URL : GROQ_BASE_URL;
-
-    if (keys.length === 0) {
-      return NextResponse.json({ error: { message: `Supreme Status: No neural links active for ${currentProvider}. Checking backup...` } }, { status: 503 });
-    }
-
-    while (attempts < keys.length * 2) { // Allow two full rotations (one for primary, one for failover backup model)
-      const apiKey = keys[attempts % keys.length];
-      console.log(`[SUPREMACY FAILOVER]: Node ${attempts + 1} (${currentProvider}/${currentModel}) - Using Key: ${apiKey.slice(0, 8)}...`);
+      console.log(`[SUPREMACY RESILIENCY]: Try ${totalAttempts + 1} (${currentProvider}/${currentModel})`);
 
       try {
         const response = await fetch(`${baseUrl}/chat/completions`, {
@@ -64,46 +67,39 @@ export async function POST(req: NextRequest) {
           headers: {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${apiKey}`,
-            'HTTP-Referer': 'https://jlr-ai.vercel.app', // Required for OpenRouter
+            'HTTP-Referer': 'https://jlr-ai.vercel.app',
             'X-Title': 'JLR AI Supremacy'
           },
-          body: JSON.stringify({
-            model: currentModel,
-            messages: finalMessages,
-            stream: true,
-          }),
+          body: JSON.stringify({ model: currentModel, messages: finalMessages, stream: true }),
         });
 
-        if (response.ok) {
-          return new Response(response.body, {
-            headers: {
-              'Content-Type': 'text/event-stream',
-              'Cache-Control': 'no-cache',
-              'Connection': 'keep-alive',
-            },
-          });
-        }
+        if (response.ok) return new Response(response.body, { headers: { 'Content-Type': 'text/event-stream' } });
 
-        // Handle JSON error response if possible
         const errorData = await response.json().catch(() => ({}));
-        console.warn(`[SUPREMACY REDIRECT]: Node ${attempts + 1} failed (${response.status}). ${errorData.error?.message || ''}`);
-        
-        // [SOVEREIGN BYPASS]: If first model fails on all keys, degrade to high-capacity core
-        if (attempts >= keys.length - 1 && currentModel !== 'llama-3.1-8b-instant' && currentProvider === 'groq') {
-          console.log(`[SUPREMACY DEGRADE]: Primary nodes saturated. Activating High-Capacity Core (8B)...`);
+        const msg = errorData.error?.message?.toLowerCase() || '';
+        const isSaturated = response.status === 429 || msg.includes('rate limit') || msg.includes('tpd') || msg.includes('saturated');
+
+        // [DEGRADATION PROTOCOL]: If primary is saturated, drop to high-capacity core immediately for next try
+        if (isSaturated && currentModel !== 'llama-3.1-8b-instant') {
+          console.warn("[SUPREMACY DEGRADE]: Model saturated. Switching to High-Capacity Core.");
           currentModel = 'llama-3.1-8b-instant';
+          // If we were on OpenRouter, maybe try the 8B there too
+          if (currentProvider === 'openrouter') currentModel = 'meta-llama/llama-3.1-8b-instruct';
+        } else if (isSaturated) {
+          // If even 8B is saturated, flip provider
+          console.warn("[SUPREMACY CROSS-LINK]: Provider saturated. Flipping provider.");
+          currentProvider = currentProvider === 'groq' ? 'openrouter' : 'groq';
         }
 
       } catch (err) {
-        console.error(`[SUPREMACY CRITICAL]: Node ${attempts + 1} link failure.`, err);
+        console.error(`[SUPREMACY FAIL]: attempt ${totalAttempts}`, err);
       }
 
-      attempts++;
-      // Small pause before next node activation to avoid instant hammer
-      await new Promise(r => setTimeout(r, 200));
+      totalAttempts++;
+      await new Promise(r => setTimeout(r, 100)); // Ultra-fast retry
     }
 
-    return NextResponse.json({ error: { message: '⚠️ JLR AI Supremacy Node Saturated. Please standby for link restoration... ⚡' } }, { status: 503 });
+    return NextResponse.json({ error: { message: '⚠️ JLR AI Supremacy: Universal Node Saturation. Please standby... ⚡' } }, { status: 503 });
 
   } catch (err: any) {
     console.error('[API CHAT ERROR]:', err);

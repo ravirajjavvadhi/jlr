@@ -66,7 +66,8 @@ export async function sendMessage(messages: any[], modelId: string, options: Mes
     lengthInstruction = "\n- MANDATORY: Provide a highly detailed, long, and comprehensive answer.";
   }
 
-  const finalSystemPrompt = SYSTEM_PROMPT_BASE.replace('{USER_NAME}', 'Commander') + lengthInstruction;
+  const name = (typeof window !== 'undefined' && localStorage.getItem('user_name')) || 'Commander';
+  const finalSystemPrompt = SYSTEM_PROMPT_BASE.replace('{USER_NAME}', name) + `\n\n[LENGTH PRIORITY]: ${lengthInstruction}`;
   
   const finalMessages = [
     { role: 'system', content: finalSystemPrompt },
