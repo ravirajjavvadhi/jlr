@@ -7,7 +7,8 @@ import Link from 'next/link';
 import { 
   PanelLeft, Send, Plus, MessageSquare, Copy, Check, StopCircle, 
   User, Sparkles, Search, Settings as SettingsIcon, MoreVertical, Zap, 
-  Terminal, ChevronDown, LogOut, Trash2, Edit2, AlertCircle, ArrowRight, ShieldAlert
+  Terminal, ChevronDown, LogOut, Trash2, Edit2, AlertCircle, ArrowRight, ShieldAlert,
+  Loader2
 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
