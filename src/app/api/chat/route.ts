@@ -127,15 +127,18 @@ export async function POST(req: NextRequest) {
     let orKeysRaw = process.env.OPENROUTER_API_KEY || process.env.NEXT_PUBLIC_OPENROUTER_API_KEY || '';
     let geminiKeysRaw = process.env.GEMINI_API_KEY || process.env.NEXT_PUBLIC_GEMINI_API_KEY || '';
 
-    // [PERSONAL NEURAL LINK]: Resolve user-specific key
+    // [PERSONAL NEURAL LINK]: Resolve user-specific keys from DB
     if (userId && userId !== 'guest') {
       try {
-        const userResult = await sql`SELECT custom_api_key FROM users WHERE id = ${userId}`;
+        const userResult = await sql`SELECT custom_api_key, gemini_api_keys FROM users WHERE id = ${userId}`;
         if (userResult[0]?.custom_api_key) {
-          const userKey = userResult[0].custom_api_key;
-          if (provider === 'openrouter') orKeysRaw = userKey;
-          else if (provider === 'gemini') geminiKeysRaw = userKey;
-          else groqKeysRaw = userKey;
+          // User's Groq keys override the global pool
+          groqKeysRaw = userResult[0].custom_api_key;
+        }
+        if (userResult[0]?.gemini_api_keys) {
+          // User's Gemini keys PREPEND to global pool (user keys tried first)
+          const userGeminiKeys = userResult[0].gemini_api_keys;
+          geminiKeysRaw = geminiKeysRaw ? `${userGeminiKeys},${geminiKeysRaw}` : userGeminiKeys;
         }
       } catch (e) {
         console.warn("[JLR-AI]: Personal Link resolution failed.");

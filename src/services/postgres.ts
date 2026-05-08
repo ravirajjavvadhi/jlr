@@ -33,6 +33,11 @@ export async function initDatabase() {
       await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS custom_api_key TEXT;`;
     } catch {}
 
+    // Ensure the gemini_api_keys column exists (Vision Intelligence Pool)
+    try {
+      await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS gemini_api_keys TEXT;`;
+    } catch {}
+
 
     await sql`
       CREATE TABLE IF NOT EXISTS chats (

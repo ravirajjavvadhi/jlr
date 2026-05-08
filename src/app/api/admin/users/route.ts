@@ -3,9 +3,8 @@ import { sql, initDatabase } from '@/services/postgres';
 
 export async function GET(req: NextRequest) {
   try {
-    await initDatabase(); // [SUPREMACY SYNC]: Ensure column exists
+    await initDatabase();
     
-    // [COMMANDER VERIFICATION]: Only Raviraj can access this vault
     const { searchParams } = new URL(req.url);
     const commander = searchParams.get('commander');
     
@@ -14,7 +13,7 @@ export async function GET(req: NextRequest) {
     }
 
     const users = await sql`
-      SELECT id, username, custom_api_key, created_at 
+      SELECT id, username, custom_api_key, gemini_api_keys, created_at 
       FROM users 
       ORDER BY created_at DESC;
     `;
@@ -27,8 +26,8 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    await initDatabase(); // [SUPREMACY SYNC]: Ensure column exists
-    const { commander, targetUserId, keys } = await req.json();
+    await initDatabase();
+    const { commander, targetUserId, keys, geminiKeys } = await req.json();
 
     if (commander !== 'raviraj') {
       return NextResponse.json({ error: 'Access Denied: Supreme Authority required.' }, { status: 403 });
@@ -38,9 +37,12 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Target Node ID required.' }, { status: 400 });
     }
 
+    // Update both Groq and Gemini keys in one shot
     await sql`
       UPDATE users 
-      SET custom_api_key = ${keys} 
+      SET 
+        custom_api_key = COALESCE(${keys ?? null}, custom_api_key),
+        gemini_api_keys = COALESCE(${geminiKeys ?? null}, gemini_api_keys)
       WHERE id = ${targetUserId};
     `;
 

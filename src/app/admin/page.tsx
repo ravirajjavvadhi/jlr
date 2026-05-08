@@ -42,7 +42,7 @@ export default function AdminDashboard() {
     }
   };
 
-  const handleUpdateKeys = async (userId: string, keys: string) => {
+  const handleUpdateKeys = async (userId: string, keys: string, geminiKeys: string) => {
     setUpdatingId(userId);
     setStatus({ type: '', msg: '' });
     try {
@@ -52,13 +52,14 @@ export default function AdminDashboard() {
         body: JSON.stringify({
           commander: 'raviraj',
           targetUserId: userId,
-          keys: keys
+          keys: keys || null,
+          geminiKeys: geminiKeys || null
         })
       });
       const data = await res.json();
       if (data.success) {
         setStatus({ type: 'success', msg: `Neural Link for Node ${userId.slice(0, 5)}... Activated.` });
-        fetchUsers(); // Refresh to update badges
+        fetchUsers();
         setTimeout(() => setStatus({ type: '', msg: '' }), 3000);
       } else {
         setStatus({ type: 'error', msg: data.error });
@@ -276,8 +277,8 @@ export default function AdminDashboard() {
                 </div>
               </div>
 
-              <div>
-                <label style={{ fontSize: '9px', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '2px', color: 'rgba(255,255,255,0.4)', display: 'block', marginBottom: '8px' }}>Dedicated Neural Keys (5-20 comma separated)</label>
+            <div>
+                <label style={{ fontSize: '9px', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '2px', color: 'rgba(255,255,255,0.4)', display: 'block', marginBottom: '8px' }}>⚡ Groq Neural Keys (comma separated, up to 20)</label>
                 <textarea
                   style={styles.textarea}
                   defaultValue={u.custom_api_key || ''}
@@ -286,10 +287,20 @@ export default function AdminDashboard() {
                 />
               </div>
 
+              <div>
+                <label style={{ fontSize: '9px', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '2px', color: 'rgba(16,185,129,0.6)', display: 'block', marginBottom: '8px' }}>🌌 Gemini Vision Keys (comma separated, up to 20)</label>
+                <textarea
+                  style={{ ...styles.textarea, color: '#4ade80', borderColor: 'rgba(16,185,129,0.15)' }}
+                  defaultValue={u.gemini_api_keys || ''}
+                  placeholder="AIzaSy...key1, AIzaSy...key2..."
+                  onChange={(e) => u.temp_gemini_keys = e.target.value}
+                />
+              </div>
+
               <div style={{ display: 'flex', gap: '12px' }}>
                 <button 
                   style={{ flex: 1, backgroundColor: '#fff', color: '#000', border: 'none', padding: '12px', borderRadius: '10px', fontSize: '11px', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '1px', cursor: 'pointer', opacity: updatingId === u.id ? 0.5 : 1 }}
-                  onClick={() => handleUpdateKeys(u.id, u.temp_keys || u.custom_api_key || '')}
+                  onClick={() => handleUpdateKeys(u.id, u.temp_keys ?? u.custom_api_key ?? '', u.temp_gemini_keys ?? u.gemini_api_keys ?? '')}
                   disabled={updatingId === u.id}
                 >
                   {updatingId === u.id ? 'SYNCHRONIZING...' : 'Establish Neural Link'}
