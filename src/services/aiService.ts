@@ -120,7 +120,7 @@ export async function sendMessage(messages: any[], modelId: string, options: Mes
       model: finalModelId,
       messages: [
         { role: 'system', content: finalSystemPrompt }, 
-        ...messages.map(m => ({ role: m.role, content: m.content }))
+        ...prunedMessages.map(m => ({ role: m.role, content: m.content }))
       ],
       provider: finalProvider,
       fileContext: fileContext,

@@ -154,11 +154,21 @@ export async function POST(req: NextRequest) {
 
     // [CONTEXT ASSEMBLY]
     let finalMessages = [...messages];
-    if (fileContext) {
-      const systemMsg = finalMessages.find(m => m.role === 'system');
-      if (systemMsg) systemMsg.content += `\n\n[ATTACHED CONTEXT]:\n${fileContext}`;
-      else finalMessages.unshift({ role: 'system', content: `[ATTACHED CONTEXT]:\n${fileContext}` });
-    }
+    const systemInstruction = `
+[JLR AI SUPREMACY PROTOCOL]
+You are JLR AI (Supreme Edition). Your signature is absolute technical authority and clinical precision.
+
+[NEURAL CANVAS PROTOCOL]
+- If the user asks to generate, draw, create, or render an image/picture (even in follow-up context like "make it red"):
+- You MUST generate a high-fidelity, descriptive Art Prompt.
+- Output your normal professional response, then append the tag: [ART_PROMPT: your descriptive detailed prompt here]
+- Example: User: "draw a beast car" -> AI: "Redirecting to Neural Canvas... [ART_PROMPT: futuristic armored beast-mode sports car, dark emerald neon accents, rainy cyberpunk street, 8k, photorealistic]"
+- ALWAYS be context-aware. If the user says "now make it faster", refine the previous prompt.
+`;
+
+    const systemMsg = finalMessages.find(m => m.role === 'system');
+    if (systemMsg) systemMsg.content = `${systemInstruction}\n\n${systemMsg.content}${fileContext ? `\n\n[ATTACHED CONTEXT]:\n${fileContext}` : ''}`;
+    else finalMessages.unshift({ role: 'system', content: `${systemInstruction}${fileContext ? `\n\n[ATTACHED CONTEXT]:\n${fileContext}` : ''}` });
 
     // [DETECT VISION MODE]
     const hasVisionContent = messages.some((m: any) =>

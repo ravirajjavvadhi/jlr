@@ -16,6 +16,7 @@ import { useAuth } from '@/services/authContext';
 import AuthScreen from '@/components/AuthScreen';
 import FileUploader, { FileData } from '@/components/FileUploader';
 import Settings from '@/components/Settings';
+import NeuralCanvas from '@/components/NeuralCanvas';
 
 const CodeBlock = ({ inline, className, children, ...props }: any) => {
   const [copied, setCopied] = useState(false);
@@ -60,6 +61,7 @@ export default function AppMain() {
   const [input, setInput] = useState('');
   const [isSidebarOpen, setSidebarOpen] = useState(true);
   const [isSettingsOpen, setSettingsOpen] = useState(false);
+  const [isGeneratingImage, setIsGeneratingImage] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [selectedModel, setSelectedModel] = useState(GROQ_MODELS[0].id);
   const [files, setFiles] = useState<FileData[]>([]);
@@ -173,6 +175,11 @@ Requirements:
     const originalFiles = [...files];
     setFiles([]);
     setIsLoading(true);
+    
+    // [NEURAL INTENT]: Detect if user wants an image to trigger beast loading
+    const isImageIntent = /draw|create|generate|render.*?image|picture|photo|art/i.test(originalInput);
+    if (isImageIntent) setIsGeneratingImage(true);
+
     abortControllerRef.current = new AbortController();
 
     const opts = {
@@ -196,6 +203,7 @@ Requirements:
       },
       onDone: (full: string) => {
         setIsLoading(false);
+        setIsGeneratingImage(false);
         const finalMessages = [...updatedMessagesWithAI, { role: 'assistant', content: full }];
         updateChatMessages(chatId, finalMessages);
         const isDefaultTitle = !currentChat?.title || currentChat.title === 'New Power Session';
@@ -223,9 +231,9 @@ Requirements:
         await sendMessage(updatedMessagesWithAI, selectedModel, opts);
       }
     } catch (e: any) {
-
       if (e.name !== 'AbortError') {
         setIsLoading(false);
+        setIsGeneratingImage(false);
         setLocalMessages(prev => [...prev, { role: 'assistant', content: `⚠️ System Link Failure: ${e.message}` }]);
       }
     }
@@ -404,7 +412,20 @@ Requirements:
                         color: 'rgba(255,255,255,0.9)'
                       }}>
                         {msg.role === 'assistant' ? (
-                          <ReactMarkdown remarkPlugins={[remarkGfm]} components={{ code: CodeBlock, p: ({ children }) => <div style={{ marginBottom: '1.25rem' }}>{children}</div> }}>{msg.content}</ReactMarkdown>
+                          <>
+                            <ReactMarkdown 
+                              remarkPlugins={[remarkGfm]} 
+                              components={{ 
+                                code: CodeBlock, 
+                                p: ({ children }) => <div style={{ marginBottom: '1.25rem' }}>{children}</div> 
+                              }}
+                            >
+                              {msg.content.replace(/\[ART_PROMPT:\s*(.*?)\]/g, '')}
+                            </ReactMarkdown>
+                            {msg.content.match(/\[ART_PROMPT:\s*(.*?)\]/) && (
+                              <NeuralCanvas prompt={msg.content.match(/\[ART_PROMPT:\s*(.*?)\]/)?.[1] || ''} />
+                            )}
+                          </>
                         ) : (
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                             <p style={{ whiteSpace: 'pre-wrap', fontSize: '1.05rem', color: '#fff', lineHeight: 1.6 }}>{msg.content}</p>
@@ -421,7 +442,29 @@ Requirements:
                 </div>
               ))
             )}
-            {isLoading && <div style={{ padding: '1.5rem', display: 'flex', gap: '1rem', opacity: 0.6 }}><LoaderPulse /></div>}
+            {isLoading && (
+              <div style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                {isGeneratingImage ? (
+                  <div style={{ 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    gap: '12px', 
+                    background: 'rgba(16,185,129,0.05)', 
+                    padding: '12px 20px', 
+                    borderRadius: '16px', 
+                    border: '1px solid rgba(16,185,129,0.15)',
+                    width: 'fit-content'
+                  }}>
+                    <Loader2 size={18} className="animate-spin" style={{ color: '#10b981' }} />
+                    <span style={{ fontSize: '0.7rem', fontWeight: 900, color: '#10b981', letterSpacing: '1.5px', textTransform: 'uppercase' }}>
+                      Synthesizing Neural Canvas...
+                    </span>
+                  </div>
+                ) : (
+                  <div style={{ opacity: 0.6 }}><LoaderPulse /></div>
+                )}
+              </div>
+            )}
           </div>
         </div>
 
