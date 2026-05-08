@@ -158,7 +158,7 @@ export async function POST(req: NextRequest) {
     }
 
     // [DETECT VISION MODE]
-    const hasVisionContent = messages.some(m =>
+    const hasVisionContent = messages.some((m: any) =>
       Array.isArray(m.content) && m.content.some((c: any) => c.type === 'image_url')
     );
 
