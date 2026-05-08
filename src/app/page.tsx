@@ -178,7 +178,10 @@ Requirements:
     const opts = {
       userId: user?.id,
       responseLength: responseIntelligence,
-      fileContext: originalFiles.length > 0 ? originalFiles.map(f => `File: ${f.name}\nContent: ${f.data}`).join('\n\n') : undefined,
+      // [CRITICAL FIX]: Only include TEXT-based documents in fileContext, NEVER base64 images/PDFs
+      fileContext: originalFiles.filter(f => f.type === 'document').length > 0
+        ? originalFiles.filter(f => f.type === 'document').map(f => `File: ${f.name}\nContent: ${f.data}`).join('\n\n')
+        : undefined,
       signal: abortControllerRef.current?.signal,
       onToken: (token: string) => {
         setLocalMessages(prev => {
@@ -207,13 +210,20 @@ Requirements:
     };
 
     try {
-      if (originalFiles.some(f => f.type === 'image' || f.type.startsWith('image/'))) {
-        const image = originalFiles.find(f => f.type === 'image' || f.type.startsWith('image/'))!;
-        await analyzeImage(image.data, originalInput, selectedModel, opts);
+      // [ABSOLUTE FIX]: Route images AND pdf_visual through the vision pipeline, never as text
+      const visualFile = originalFiles.find(f => f.type === 'image' || f.type === 'pdf_visual' || f.type.startsWith('image/'));
+      if (visualFile) {
+        // For PDFs, use first page. For images, use data directly.
+        const imageData = visualFile.data;
+        const prompt = originalInput || (visualFile.type === 'pdf_visual'
+          ? `Analyze this document page from "${visualFile.name}" in detail. Extract all text, explain all content thoroughly.`
+          : `Analyze this image in high-density detail.`);
+        await analyzeImage(imageData, prompt, selectedModel, opts);
       } else {
         await sendMessage(updatedMessagesWithAI, selectedModel, opts);
       }
     } catch (e: any) {
+
       if (e.name !== 'AbortError') {
         setIsLoading(false);
         setLocalMessages(prev => [...prev, { role: 'assistant', content: `⚠️ System Link Failure: ${e.message}` }]);

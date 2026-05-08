@@ -8,15 +8,17 @@ const OPENROUTER_BASE_URL = 'https://openrouter.ai/api/v1';
 
 // [MODEL MAPPER]: Ensure IDs are perfect for each provider
 function mapModelId(modelId: string, provider: string): string {
+    const isVision = modelId.includes('vision') || modelId.includes('vl') || modelId.includes('llava');
     if (provider === 'groq') {
+        if (isVision) return modelId; // Preserve vision IDs exactly (e.g. llama-3.2-90b-vision-preview)
         if (modelId.includes('70b')) return 'llama-3.3-70b-versatile';
         if (modelId.includes('8b')) return 'llama-3.1-8b-instant';
-        return modelId; // default
+        return modelId;
     } else {
         // OpenRouter mappings
         if (modelId === 'llama-3.3-70b-versatile') return 'meta-llama/llama-3.3-70b-instruct';
         if (modelId === 'llama-3.1-8b-instant') return 'meta-llama/llama-3.1-8b-instruct';
-        if (modelId.includes('vision') && !modelId.includes('/')) return `meta-llama/${modelId}`;
+        if (isVision && !modelId.includes('/')) return `meta-llama/${modelId}`;
         return modelId;
     }
 }

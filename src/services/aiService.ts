@@ -187,24 +187,17 @@ export async function sendMessage(messages: any[], modelId: string, options: Mes
 export async function analyzeImage(imageBase64: string, text: string, selectedModelId: string, options: MessageOptions = {}) {
   const { onToken, onDone, onError, userId } = options;
   
-  const VISION_FALLBACKS = [
-    { provider: 'openrouter', model: 'qwen/qwen-2.5-vl-72b-instruct' },
+  // [TRICK]: Try Groq vision FIRST as primary (user has local Groq keys).
+  // OpenRouter is secondary fallback (requires paid key).
+  const VISION_ATTEMPTS = [
+    { provider: 'groq', model: 'llama-3.2-90b-vision-preview' },
     { provider: 'groq', model: 'llama-3.2-11b-vision-preview' },
-    { provider: 'openrouter', model: 'google/gemini-pro-1.5' },
+    { provider: 'openrouter', model: 'qwen/qwen-2.5-vl-72b-instruct' },
+    { provider: 'openrouter', model: 'meta-llama/llama-3.2-90b-vision-instruct' },
   ];
 
-  let attempts = [];
-  attempts.push({ provider: 'openrouter', model: 'qwen/qwen-2.5-vl-72b-instruct' });
+  let attempts = [...VISION_ATTEMPTS];
   let lastProxyError = '';
-  
-  if (selectedModelId.includes('vision') && selectedModelId !== 'qwen/qwen-2.5-vl-72b-instruct') {
-    if (selectedModelId.includes('groq')) attempts.push({ provider: 'groq', model: selectedModelId });
-    else attempts.push({ provider: 'openrouter', model: selectedModelId });
-  }
-  
-  VISION_FALLBACKS.forEach(f => {
-    if (!attempts.find(a => a.model === f.model)) attempts.push(f);
-  });
 
   for (const attempt of attempts) {
     try {
