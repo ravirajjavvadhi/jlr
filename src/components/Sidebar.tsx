@@ -111,7 +111,11 @@ const Sidebar: React.FC<SidebarProps> = ({
           {featuredModules.map(mod => (
              <div 
                key={mod.id}
-               onClick={mod.onClick}
+               onClick={() => {
+                 if (mod.active && mod.route) {
+                   window.location.href = mod.route;
+                 }
+               }}
                style={{ 
                  display: 'flex', 
                  alignItems: 'center', 
@@ -120,13 +124,13 @@ const Sidebar: React.FC<SidebarProps> = ({
                  borderRadius: '10px',
                  cursor: mod.active ? 'pointer' : 'default',
                  transition: 'all 0.2s',
-                 background: mod.active && mod.id !== 'search' && mod.id !== 'memory' ? 'rgba(16, 185, 129, 0.05)' : 'transparent',
-                 border: mod.active && mod.id !== 'search' && mod.id !== 'memory' ? '1px solid rgba(16, 185, 129, 0.1)' : '1px solid transparent'
+                 background: pathname === mod.route ? 'rgba(16, 185, 129, 0.05)' : 'transparent',
+                 border: pathname === mod.route ? '1px solid rgba(16, 185, 129, 0.1)' : '1px solid transparent'
                }}
                className="sidebar-featured-item"
              >
-                <div style={{ color: mod.active && mod.id !== 'search' && mod.id !== 'memory' ? '#10b981' : 'rgba(255,255,255,0.4)' }}>{mod.icon}</div>
-                <div style={{ fontSize: '0.8rem', fontWeight: 600, color: mod.active && mod.id !== 'search' && mod.id !== 'memory' ? '#fff' : 'rgba(255,255,255,0.5)' }}>{mod.name}</div>
+                <div style={{ color: pathname === mod.route ? '#10b981' : 'rgba(255,255,255,0.4)' }}>{mod.icon}</div>
+                <div style={{ fontSize: '0.8rem', fontWeight: 600, color: pathname === mod.route ? '#fff' : 'rgba(255,255,255,0.5)' }}>{mod.name}</div>
                 {!mod.active && <div style={{ marginLeft: 'auto', fontSize: '0.5rem', padding: '2px 6px', background: 'rgba(255,165,0,0.1)', color: '#ffa500', borderRadius: '4px', fontWeight: 900 }}>SOON</div>}
              </div>
           ))}

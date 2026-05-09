@@ -204,14 +204,16 @@ Requirements:
             updated[updated.length - 1] = { ...last, content: last.content + token };
             return updated;
           }
-          return [...prev, { role: 'assistant', content: token }];
+          return [...prev, { id: 'streaming-ai', role: 'assistant', content: token }];
         });
       },
       onDone: (full: string) => {
         setIsLoading(false);
         setIsGeneratingImage(false);
-        const finalMessages = [...updatedMessagesWithAI, { role: 'assistant', content: full }];
+        const aiMessage = { id: Date.now().toString(), role: 'assistant', content: full };
+        const finalMessages = [...updatedMessagesWithAI, aiMessage];
         updateChatMessages(chatId, finalMessages);
+        setLocalMessages(finalMessages); // Explicitly sync local state
         
         const isDefaultTitle = !currentChat?.title || currentChat.title === 'New Power Session';
         if (updatedMessagesWithAI.length === 1 && isDefaultTitle) {
@@ -220,7 +222,12 @@ Requirements:
       },
       onError: (err: any) => {
         setIsLoading(false);
-        setLocalMessages(prev => [...prev, { role: 'assistant', content: `⚠️ ${err.message || err}` }]);
+        const errorMsg = typeof err === 'string' ? err : (err.message || 'Unknown Neural Error');
+        setLocalMessages(prev => [...prev, { 
+          id: Date.now().toString(), 
+          role: 'assistant', 
+          content: `⚠️ JLR AI ERROR: ${errorMsg}` 
+        }]);
       }
     };
 
