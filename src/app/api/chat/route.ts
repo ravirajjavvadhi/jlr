@@ -354,7 +354,15 @@ You are JLR AI (Supreme Edition). Your signature is absolute technical authority
         }
 
         if (!success) {
-           controller.enqueue(encoder.encode(`data: ${JSON.stringify({ choices: [{ delta: { content: `⚠️ Neural Pipeline Interrupted: ${lastErrorMsg}` } }] })}\n\n`));
+           let safeError = lastErrorMsg;
+           const lowerErr = lastErrorMsg.toLowerCase();
+           if (lowerErr.includes('rate limit') || lowerErr.includes('429') || lowerErr.includes('console.groq.com') || lowerErr.includes('billing')) {
+               safeError = 'JLR Sovereign Servers are currently experiencing maximum computational load. Neural bandwidth is saturated. Please try again in 1-2 minutes.';
+           } else if (lowerErr.includes('decommissioned') || lowerErr.includes('unsupported')) {
+               safeError = 'The requested Neural Node has been decommissioned by JLR Central. Please try another model.';
+           }
+           
+           controller.enqueue(encoder.encode(`data: ${JSON.stringify({ choices: [{ delta: { content: `⚠️ Technical Diagnostic: ${safeError}` } }] })}\n\n`));
         }
 
         controller.enqueue(encoder.encode(`data: [DONE]\n\n`));
