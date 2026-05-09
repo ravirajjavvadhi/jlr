@@ -71,12 +71,13 @@ export default function SovereignCinematic({ manifestJson }: SovereignCinematicP
       const parsed = JSON.parse(repairedJson);
       if (!Array.isArray(parsed)) return [];
       return parsed.map((s, i) => {
+        if (!s || !s.imagePrompt) return "https://image.pollinations.ai/prompt/Cinematic%20Mystery?width=1920&height=1080&nologo=true&seed=1337";
         const prompt = encodeURIComponent(s.imagePrompt);
-        const seed = 1337 + i; // High-fidelity seed
+        const seed = 1337 + i; 
         return `https://image.pollinations.ai/prompt/${prompt}?width=1920&height=1080&nologo=true&seed=${seed}&model=flux`;
       });
     } catch { return []; }
-  }, [manifestJson]);
+  }, [repairedJson]);
 
   // [PRE-ROLL BUFFERING LOGIC]
   useEffect(() => {
@@ -87,6 +88,7 @@ export default function SovereignCinematic({ manifestJson }: SovereignCinematicP
          setPreloadedImages(prev => new Set(prev).add(sceneUrls[0]));
          setIsBuffering(false);
       };
+      img.onerror = () => setIsBuffering(false); // Fail fast
     } else if (sceneUrls.length > 0) {
       setIsBuffering(false);
     }
@@ -97,10 +99,12 @@ export default function SovereignCinematic({ manifestJson }: SovereignCinematicP
       const parsed = JSON.parse(repairedJson);
       if (Array.isArray(parsed)) {
         setScenes(parsed);
+        setCurrentSceneIndex(0); // [CRITICAL]: Reset on new manifest to prevent OOB
         setIsLoadingManifest(false);
-      } else { throw new Error("Invalid format"); }
+      } else { 
+        setIsLoadingManifest(false);
+      }
     } catch {
-      setError("Cinematic Manifest Linkage Failure.");
       setIsLoadingManifest(false);
     }
     if (typeof window !== 'undefined') synthRef.current = window.speechSynthesis;
@@ -108,7 +112,7 @@ export default function SovereignCinematic({ manifestJson }: SovereignCinematicP
       if (timerRef.current) clearTimeout(timerRef.current);
       if (synthRef.current) synthRef.current.cancel();
     };
-  }, [manifestJson]);
+  }, [repairedJson]);
 
   // [PRELOAD NEXT ASSET (PIPELINED)]
   useEffect(() => {
@@ -121,28 +125,33 @@ export default function SovereignCinematic({ manifestJson }: SovereignCinematicP
   }, [currentSceneIndex, sceneUrls]);
 
   const playNarration = (text: string) => {
-    if (!synthRef.current || isMuted) return;
-    synthRef.current.cancel();
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.rate = 0.90; // Authoritative slow pace
-    utterance.pitch = 0.95; // Deep resonance
-    const voices = synthRef.current.getVoices();
-    const premium = voices.find(v => v.name.includes('Google') || v.name.includes('Natural') || v.name.includes('Daniel')) || voices[0];
-    if (premium) utterance.voice = premium;
-    synthRef.current.speak(utterance);
+    if (!synthRef.current || isMuted || !text) return;
+    try {
+      synthRef.current.cancel();
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.rate = 0.90;
+      utterance.pitch = 0.95;
+      const voices = synthRef.current.getVoices();
+      const premium = voices.find(v => v.name.includes('Google') || v.name.includes('Natural') || v.name.includes('Daniel')) || voices[0];
+      if (premium) utterance.voice = premium;
+      synthRef.current.speak(utterance);
+    } catch {}
   };
 
   const handleSceneChange = (index: number) => {
-    if (!scenes[index]) return;
+    const s = scenes[index];
+    if (!s) return;
     setCurrentSceneIndex(index);
     
     if (isPlaying) {
-      playNarration(scenes[index].narration);
+      playNarration(s.narration || "");
       if (timerRef.current) clearTimeout(timerRef.current);
+      
+      const duration = (Number(s.duration) || 10) * 1000;
       timerRef.current = setTimeout(() => {
         if (index < scenes.length - 1) handleSceneChange(index + 1);
         else setIsPlaying(false);
-      }, scenes[index].duration * 1000);
+      }, duration);
     }
   };
 
@@ -166,7 +175,9 @@ export default function SovereignCinematic({ manifestJson }: SovereignCinematicP
   if (error) return <div className="error-alert">{error}</div>;
 
   const scene = scenes[currentSceneIndex];
-  const progress = ((currentSceneIndex + 1) / scenes.length) * 100;
+  if (!scene && !isLoadingManifest) return null;
+
+  const progress = scenes.length > 0 ? ((currentSceneIndex + 1) / scenes.length) * 100 : 0;
 
   // [MOTION PRO 3.0 VARIANTS]
   const containerVariants = {

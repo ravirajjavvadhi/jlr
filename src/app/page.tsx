@@ -100,11 +100,16 @@ export default function AppMain() {
       const cloudMsgs = currentChat.messages || [];
       const isChatSwitch = lastChatIdRef.current !== currentChatId;
       
-      // Sync local messages ONLY on chat switch OR if local state is remarkably behind cloud
-      // This prevents infinite re-render loops caused by length-based triggers
-      if (isChatSwitch || (localMessages.length === 0 && cloudMsgs.length > 0)) {
+      // [SOVEREIGN PROTECTION]: On chat switch, clear local messages first to prevent ghost rendering collisions
+      if (isChatSwitch) {
+        setLocalMessages([]); 
+        // Small delay to ensure state clears before loading new batch
+        setTimeout(() => {
+          setLocalMessages(cloudMsgs);
+          lastChatIdRef.current = currentChatId;
+        }, 10);
+      } else if (localMessages.length === 0 && cloudMsgs.length > 0) {
         setLocalMessages(cloudMsgs);
-        lastChatIdRef.current = currentChatId;
       }
     } else if (!currentChatId) {
       if (localMessages.length > 0) setLocalMessages([]);
