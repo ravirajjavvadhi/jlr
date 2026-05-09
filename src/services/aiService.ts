@@ -196,7 +196,6 @@ export async function analyzeImage(imageBase64: string, text: string, selectedMo
   // [TRICK]: Try Groq vision FIRST as primary (user has local Groq keys).
   // OpenRouter is secondary fallback (requires paid key).
   const VISION_ATTEMPTS = [
-    { provider: 'groq', model: 'llama-3.2-90b-vision-preview' },
     { provider: 'groq', model: 'llama-3.2-11b-vision-preview' },
     { provider: 'openrouter', model: 'qwen/qwen-2.5-vl-72b-instruct' },
     { provider: 'openrouter', model: 'meta-llama/llama-3.2-90b-vision-instruct' },

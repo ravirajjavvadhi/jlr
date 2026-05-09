@@ -234,16 +234,23 @@ You are JLR AI (Supreme Edition). Your signature is absolute technical authority
         let streamModel = model;
         if (hasVisionContent && streamProvider !== 'gemini') {
           streamProvider = geminiKeys.length > 0 ? 'gemini' : 'groq';
-          streamModel = streamProvider === 'gemini' ? 'gemini-2.0-flash' : 'llama-3.2-90b-vision-preview';
+          streamModel = streamProvider === 'gemini' ? 'gemini-2.0-flash' : 'llama-3.2-11b-vision-preview';
         }
 
-        const maxAttempts = Math.max(10, 3 * ((groqKeys.length + orKeys.length + geminiKeys.length) || 1));
+        let activeKeys = (streamProvider === 'gemini' ? geminiKeys : (streamProvider === 'openrouter' ? orKeys : groqKeys));
+        if (activeKeys.length === 0) {
+          streamProvider = 'groq';
+          activeKeys = groqKeys;
+        }
+
+        // Extremely aggressively optimized attempt counter! Try each key max 1 time, plus 1 failover.
+        const maxAttempts = Math.min(5, Math.max(2, activeKeys.length * 2));
         let attempts = 0;
         let success = false;
         let lastErrorMsg = 'All Neural Nodes Exhausted';
 
         while (attempts < maxAttempts && !success) {
-          let activeKeys = (streamProvider === 'gemini' ? geminiKeys : (streamProvider === 'openrouter' ? orKeys : groqKeys));
+          activeKeys = (streamProvider === 'gemini' ? geminiKeys : (streamProvider === 'openrouter' ? orKeys : groqKeys));
           if (activeKeys.length === 0) {
             streamProvider = 'groq';
             activeKeys = groqKeys;
@@ -279,7 +286,7 @@ You are JLR AI (Supreme Edition). Your signature is absolute technical authority
                 const status = geminiRes.status;
                 if (status === 429 || status === 401 || status === 403) {
                     streamProvider = 'groq';
-                    streamModel = hasVisionContent ? 'llama-3.2-90b-vision-preview' : 'llama-3.3-70b-versatile';
+                    streamModel = hasVisionContent ? 'llama-3.2-11b-vision-preview' : 'llama-3.3-70b-versatile';
                 }
                 attempts++;
                 await new Promise(r => setTimeout(r, 600));
@@ -314,7 +321,7 @@ You are JLR AI (Supreme Edition). Your signature is absolute technical authority
                    if (attempts > 0 && attempts % activeKeys.length === 0) {
                      if (streamProvider === 'openrouter') {
                        streamProvider = 'groq';
-                       streamModel = hasVisionContent ? 'llama-3.2-90b-vision-preview' : 'llama-3.3-70b-versatile';
+                       streamModel = hasVisionContent ? 'llama-3.2-11b-vision-preview' : 'llama-3.3-70b-versatile';
                      } else {
                        streamProvider = 'openrouter';
                        streamModel = hasVisionContent ? 'qwen/qwen-2.5-vl-72b-instruct' : 'meta-llama/llama-3.3-70b-instruct';
