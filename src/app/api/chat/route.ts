@@ -247,8 +247,8 @@ You are JLR AI (Supreme Edition). Your signature is absolute technical authority
           activeKeys = groqKeys;
         }
 
-        // Extremely aggressively optimized attempt counter! Try each key max 1 time, plus 1 failover.
-        const maxAttempts = Math.min(5, Math.max(2, activeKeys.length * 2));
+        // [CRITICAL OPTIMIZATION]: Try EVERY key you provided exactly once, plus 2 fallback attempts.
+        const maxAttempts = Math.max(3, activeKeys.length + 1);
         let attempts = 0;
         let success = false;
         let lastErrorMsg = 'All Neural Nodes Exhausted';
@@ -333,7 +333,7 @@ You are JLR AI (Supreme Edition). Your signature is absolute technical authority
                    if (attempts > 0 && attempts % activeKeys.length === 0) {
                      if (streamProvider === 'openrouter') {
                        streamProvider = 'gemini';
-                       streamModel = hasVisionContent ? 'gemini-2.0-flash' : 'llama-3.3-70b-versatile';
+                       streamModel = 'gemini-2.0-flash';
                      } else {
                        streamProvider = 'openrouter';
                        streamModel = hasVisionContent ? 'qwen/qwen-2.5-vl-72b-instruct' : 'meta-llama/llama-3.3-70b-instruct';
