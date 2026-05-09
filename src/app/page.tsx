@@ -424,15 +424,15 @@ Requirements:
                             >
                               {msg.content
                                 .replace(/\[ART_PROMPT:\s*(.*?)\]/g, '')
-                                .replace(/\[CINEMATIC_MANIFEST:\s*([\s\S]*?)\]/g, '')}
+                                .replace(/<<<CINEMATIC_MANIFEST_START>>>[\s\S]*?<<<CINEMATIC_MANIFEST_END>>>/g, '')}
                             </ReactMarkdown>
 
                             {msg.content.match(/\[ART_PROMPT:\s*(.*?)\]/) && (
                               <NeuralCanvas prompt={msg.content.match(/\[ART_PROMPT:\s*(.*?)\]/)?.[1] || ''} />
                             )}
 
-                            {msg.content.match(/\[CINEMATIC_MANIFEST:\s*([\s\S]*?)\]/) && (
-                              <SovereignCinematic manifestJson={msg.content.match(/\[CINEMATIC_MANIFEST:\s*([\s\S]*?)\]/)?.[1] || '[]'} />
+                            {msg.content.match(/<<<CINEMATIC_MANIFEST_START>>>([\s\S]*?)<<<CINEMATIC_MANIFEST_END>>>/) && (
+                              <SovereignCinematic manifestJson={msg.content.match(/<<<CINEMATIC_MANIFEST_START>>>([\s\S]*?)<<<CINEMATIC_MANIFEST_END>>>/)?.[1] || '[]'} />
                             )}
                           </>
                         ) : (
