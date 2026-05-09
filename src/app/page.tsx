@@ -346,7 +346,7 @@ Requirements:
                   <div style={{ fontSize: '0.9rem', fontWeight: 900, overflow: 'hidden', textOverflow: 'ellipsis' }}>{user ? user.username : 'GUEST NODE'}</div>
                   <div style={{ fontSize: '0.65rem', color: user?.id !== 'guest' ? 'var(--accent-beast)' : 'rgba(255,255,255,0.3)', fontWeight: 800 }}>{user?.id !== 'guest' ? 'SUPREME ACCESS' : 'RESTRICTED LINK'}</div>
                 </div>
-                {user?.username === 'raviraj' && (
+                {(user?.username === 'raviraj' || user?.email === 'ravirajjavvadi@gmail.com') && (
                   <Link href="/admin" style={{ color: 'rgba(255,255,255,0.4)' }} title="Supreme Command Center">
                     <ShieldAlert size={16} />
                   </Link>

@@ -13,6 +13,7 @@ export type Chat = {
 type User = {
   id: string;
   username: string;
+  email?: string;
   isGuest?: boolean;
   custom_api_key?: string;
 };
@@ -22,6 +23,7 @@ type AuthContextType = {
   user: User | null;
   loading: boolean;
   login: (username: string, supremacyKey: string) => Promise<void>;
+  loginWithGoogle: () => Promise<void>;
   signup: (username: string, supremacyKey: string) => Promise<void>;
   logout: () => void;
   chats: Chat[];
@@ -32,6 +34,9 @@ type AuthContextType = {
   renameChat: (chatId: string, title: string) => Promise<void>;
   deleteChat: (chatId: string) => Promise<void>;
 };
+
+import { auth, googleProvider } from './firebase';
+import { signInWithPopup } from 'firebase/auth';
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
@@ -178,6 +183,34 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const loginWithGoogle = async () => {
+    try {
+      setLoading(true);
+      const result = await signInWithPopup(auth, googleProvider);
+      const firebaseUser = result.user;
+      
+      const res = await fetch(`/api/auth?action=google`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          email: firebaseUser.email, 
+          username: firebaseUser.displayName || firebaseUser.email?.split('@')[0],
+          id: firebaseUser.uid 
+        })
+      });
+      
+      if (!res.ok) throw new Error('Cloud Link Failed');
+
+      const data = await res.json();
+      localStorage.setItem('supremacy_session', JSON.stringify(data.user));
+      window.location.reload();
+    } catch (err: any) {
+      console.error("[GOOGLE AUTH ERR]:", err);
+      setLoading(false);
+      throw err;
+    }
+  };
+
   const signup = async (username: string, supremacyKey: string) => {
     try {
       const res = await fetch(`/api/auth?action=signup`, {
@@ -204,7 +237,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const logout = () => {
     localStorage.removeItem('supremacy_session');
-    // We don't remove namespaced chat storage so the user's data remains on device
+    auth.signOut();
     window.location.reload();
   };
 
@@ -300,7 +333,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   return (
     <AuthContext.Provider value={{
-      user, loading, login, signup, logout,
+      user, loading, login, loginWithGoogle, signup, logout,
       chats, currentChatId, setCurrentChatId,
       createNewChat, updateChatMessages, renameChat, deleteChat
     }}>

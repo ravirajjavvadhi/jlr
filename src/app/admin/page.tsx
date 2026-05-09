@@ -17,9 +17,10 @@ export default function AdminDashboard() {
 
   // [SECURITY BLOCK]: Absolute Authority Check
   useEffect(() => {
-    if (!user || user.username !== 'raviraj') {
+    const isAdmin = user && (user.username === 'raviraj' || user.email === 'ravirajjavvadi@gmail.com');
+    if (!isAdmin) {
       const timer = setTimeout(() => {
-        if (!user || user.username !== 'raviraj') router.push('/');
+        if (!user || (user.username !== 'raviraj' && user.email !== 'ravirajjavvadi@gmail.com')) router.push('/');
       }, 1500);
       return () => clearTimeout(timer);
     }
@@ -265,15 +266,17 @@ export default function AdminDashboard() {
             <div style={{ border: '1px dashed rgba(255,255,255,0.1)', borderRadius: '20px', padding: '60px', textAlign: 'center' }}>
               <p style={{ fontSize: '11px', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '2px', color: 'rgba(255,255,255,0.2)' }}>No Nodes Match Your Search</p>
             </div>
-          ) : filteredUsers.map(u => (
+          ) : filteredUsers.map(u => {
+            if (!u || !u.id) return null;
+            return (
             <div key={u.id} style={styles.card}>
               <div style={styles.nodeHeader}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                  <span style={{ fontSize: '18px', fontWeight: 800 }}>@{u.username}</span>
+                  <span style={{ fontSize: '18px', fontWeight: 800 }}>@{u.username || 'Unknown Node'}</span>
                   <span style={styles.badge(!!u.custom_api_key)}>{u.custom_api_key ? 'NODE LINKED' : 'LIMITED ACCESS'}</span>
                 </div>
                 <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.3)', fontWeight: 800 }}>
-                  ESTABLISHED: {new Date(u.created_at).toLocaleDateString()}
+                  ESTABLISHED: {u.created_at ? new Date(u.created_at).toLocaleDateString() : 'Syncing...'}
                 </div>
               </div>
 
@@ -297,17 +300,18 @@ export default function AdminDashboard() {
                 />
               </div>
 
-              <div style={{ display: 'flex', gap: '12px' }}>
-                <button 
-                  style={{ flex: 1, backgroundColor: '#fff', color: '#000', border: 'none', padding: '12px', borderRadius: '10px', fontSize: '11px', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '1px', cursor: 'pointer', opacity: updatingId === u.id ? 0.5 : 1 }}
-                  onClick={() => handleUpdateKeys(u.id, u.temp_keys ?? u.custom_api_key ?? '', u.temp_gemini_keys ?? u.gemini_api_keys ?? '')}
-                  disabled={updatingId === u.id}
-                >
-                  {updatingId === u.id ? 'SYNCHRONIZING...' : 'Establish Neural Link'}
-                </button>
+                <div style={{ display: 'flex', gap: '12px' }}>
+                  <button 
+                    style={{ flex: 1, backgroundColor: '#fff', color: '#000', border: 'none', padding: '12px', borderRadius: '10px', fontSize: '11px', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '1px', cursor: 'pointer', opacity: updatingId === u.id ? 0.5 : 1 }}
+                    onClick={() => handleUpdateKeys(u.id, u.temp_keys ?? u.custom_api_key ?? '', u.temp_gemini_keys ?? u.gemini_api_keys ?? '')}
+                    disabled={updatingId === u.id}
+                  >
+                    {updatingId === u.id ? 'SYNCHRONIZING...' : 'Establish Neural Link'}
+                  </button>
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
     </div>

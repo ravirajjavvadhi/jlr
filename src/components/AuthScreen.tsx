@@ -10,7 +10,7 @@ export default function AuthScreen({ onClose }: { onClose?: () => void }) {
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const { login, signup } = useAuth();
+  const { login, loginWithGoogle, signup } = useAuth();
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -32,9 +32,21 @@ export default function AuthScreen({ onClose }: { onClose?: () => void }) {
     }
   };
 
+  const handleGoogleLogin = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      await loginWithGoogle();
+      if (onClose) onClose();
+    } catch (err: any) {
+      setError(err.message || 'GOOGLE AUTH FAILED');
+      setLoading(false);
+    }
+  };
+
 
   return (
-    <div style={{ height: '100vh', width: '100vw', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem', background: '#020202' }}>
+    <div style={{ height: '100dvh', width: '100vw', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem', background: '#020202' }}>
       <motion.div 
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
@@ -69,6 +81,23 @@ export default function AuthScreen({ onClose }: { onClose?: () => void }) {
             {error.toUpperCase()}
           </motion.div>
         )}
+
+        <button 
+          onClick={handleGoogleLogin}
+          type="button"
+          className="btn-beast" 
+          disabled={loading} 
+          style={{ width: '100%', padding: '0.9rem', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.75rem', letterSpacing: '2px', fontSize: '0.75rem', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)' }}
+        >
+          <img src="https://www.google.com/favicon.ico" alt="Google" style={{ width: '16px', height: '16px' }} />
+          {loading ? 'SYNCING...' : 'ACTIVATE WITH GOOGLE'}
+        </button>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1.5rem', opacity: 0.2 }}>
+          <div style={{ flex: 1, height: '1px', background: '#fff' }} />
+          <span style={{ fontSize: '0.6rem', fontWeight: 900 }}>OR</span>
+          <div style={{ flex: 1, height: '1px', background: '#fff' }} />
+        </div>
 
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
           <div style={{ position: 'relative' }}>

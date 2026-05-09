@@ -9,9 +9,32 @@ export async function POST(req: NextRequest) {
     const { searchParams } = new URL(req.url);
 
     const action = searchParams.get('action');
-    const { username, password } = await req.json();
+    const { username, password, email, id } = await req.json();
 
-    if (!username || !password) {
+    if (action === 'google') {
+      if (!email) return NextResponse.json({ error: 'Email required' }, { status: 400 });
+      
+      let user = await User.findOne({ email: email.toLowerCase() });
+      if (!user) {
+        // Create new user for first-time google login
+        user = await User.create({
+          username: username?.toLowerCase() || email.split('@')[0],
+          email: email.toLowerCase(),
+          password: `google_${id || Date.now()}`, // Placeholder for schema requirement
+        });
+      }
+      
+      return NextResponse.json({
+        user: {
+          id: user._id.toString(),
+          username: user.username,
+          email: user.email,
+          custom_api_key: user.custom_api_key
+        }
+      });
+    }
+
+    if (!username || (!password && action !== 'google')) {
       return NextResponse.json({ error: 'Username and password required' }, { status: 400 });
     }
 
@@ -56,6 +79,7 @@ export async function POST(req: NextRequest) {
         user: { 
           id: user._id.toString(), 
           username: user.username, 
+          email: user.email,
           custom_api_key: user.custom_api_key 
         } 
       });
