@@ -8,7 +8,7 @@ import {
   PanelLeft, Send, Plus, MessageSquare, Copy, Check, StopCircle, 
   User, Sparkles, Search, Settings as SettingsIcon, MoreVertical, Zap, 
   Terminal, ChevronDown, LogOut, Trash2, Edit2, AlertCircle, ArrowRight, ShieldAlert,
-  Loader2, Film
+  Loader2, Film, Globe
 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -440,6 +440,43 @@ Requirements:
             borderRadius: isMobile ? '24px' : '32px',
             boxShadow: '0 20px 50px rgba(0,0,0,0.5)'
           }}>
+            {/* SUPREME INTELLIGENCE TOGGLE */}
+            <div style={{ display: 'flex', justifyContent: 'center', margin: '-24px auto 12px auto', zIndex: 10 }}>
+              <button 
+                onClick={() => setIsSearchMode(!isSearchMode)}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  padding: '6px 14px',
+                  borderRadius: '20px',
+                  background: isSearchMode ? 'rgba(16, 185, 129, 0.15)' : 'rgba(0,0,0,0.4)',
+                  border: isSearchMode ? '1px solid rgba(16, 185, 129, 0.4)' : '1px solid rgba(255,255,255,0.1)',
+                  cursor: 'pointer',
+                  transition: 'all 0.3s ease',
+                  backdropFilter: 'blur(10px)',
+                  boxShadow: isSearchMode ? '0 0 15px rgba(16,185,129,0.2)' : 'none'
+                }}
+              >
+                <div style={{ 
+                  width: '6px', 
+                  height: '6px', 
+                  borderRadius: '50%', 
+                  background: isSearchMode ? '#10b981' : 'rgba(255,255,255,0.3)',
+                  boxShadow: isSearchMode ? '0 0 8px #10b981' : 'none'
+                }} />
+                <span style={{ 
+                  fontSize: '0.65rem', 
+                  fontWeight: 800, 
+                  letterSpacing: '1px',
+                  color: isSearchMode ? '#10b981' : 'rgba(255,255,255,0.5)'
+                }}>
+                  {isSearchMode ? 'GLOBAL INTELLIGENCE: ONLINE' : 'LIGHTNING MODE: FAST'}
+                </span>
+                <Globe size={12} style={{ color: isSearchMode ? '#10b981' : 'rgba(255,255,255,0.3)' }} />
+              </button>
+            </div>
+
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px', padding: '0 4px' }}>
               <FileUploader files={files} onFilesChange={setFiles} showButton={false} />
               

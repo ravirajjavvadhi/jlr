@@ -148,76 +148,6 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const { messages, model, provider, fileContext, userId, isSearchMode } = body;
 
-    let lastMessage = '';
-    const lastMsgObj = messages[messages.length - 1];
-    if (lastMsgObj && typeof lastMsgObj.content === 'string') {
-      lastMessage = lastMsgObj.content;
-    } else if (Array.isArray(lastMsgObj?.content)) {
-      lastMessage = lastMsgObj.content.find((c: any) => c.type === 'text')?.text || '';
-    }
-
-    const isSearchIntent = isSearchMode || /today|date|time|current|latest|now|news|who is|what is|search/i.test(lastMessage);
-    
-    // [SMART TIME NODE]: Always know the exact moment
-    const currentMoment = new Date().toLocaleString('en-US', { timeZone: 'Asia/Kolkata' });
-    let intelligenceContext = `\n[SYSTEM CLOCK]: ${currentMoment} (IST)\n\n`;
-
-    if (isSearchIntent) {
-      console.log(`[JLR-AI]: Activating Global Intelligence for: "${lastMessage}"`);
-      const searchData = await getGlobalIntelligence(lastMessage);
-      if (searchData) {
-        intelligenceContext += `[JLR GLOBAL INTELLIGENCE FEED]:\n` + 
-          (searchData.answer ? `Direct Answer: ${searchData.answer}\n` : '') + 
-          searchData.results.map((r: any) => `- ${r.title}: ${r.content} (${r.url})`).join('\n');
-      }
-    }
-
-    // [KEY POOL]: Parse all keys
-    let groqKeysRaw = process.env.GROQ_API_KEY || process.env.NEXT_PUBLIC_GROQ_API_KEY || '';
-    let orKeysRaw = process.env.OPENROUTER_API_KEY || process.env.NEXT_PUBLIC_OPENROUTER_API_KEY || '';
-    let geminiKeysRaw = process.env.GEMINI_API_KEY || process.env.NEXT_PUBLIC_GEMINI_API_KEY || '';
-
-    // [PERSONAL NEURAL LINK]: Resolve user-specific keys from DB
-    if (userId && userId !== 'guest') {
-      try {
-        await connectToDatabase();
-        const userNode = await User.findOne({ _id: userId });
-        if (userNode?.custom_api_key) {
-          // User's Groq keys override the global pool
-          groqKeysRaw = userNode.custom_api_key;
-        }
-        if (userNode?.gemini_api_keys && userNode.gemini_api_keys.length > 0) {
-          // User's Gemini keys PREPEND to global pool (user keys tried first)
-          const userGeminiKeys = userNode.gemini_api_keys.join(',');
-          geminiKeysRaw = geminiKeysRaw ? `${userGeminiKeys},${geminiKeysRaw}` : userGeminiKeys;
-        }
-      } catch (e) {
-        console.warn("[JLR-AI]: Personal Link resolution failed.", e);
-      }
-    }
-
-    // [SOVEREIGN KEY VAULT]: Resolve Master Keys from DB (Sovereign override)
-    try {
-      const SystemConfig = (await import('@/models/SystemConfig')).default;
-      const configs = await SystemConfig.find({});
-      const masterGroq = configs.find(c => c.key === 'master_groq_keys')?.value;
-      const masterGemini = configs.find(c => c.key === 'master_gemini_keys')?.value;
-
-      if (masterGroq) groqKeysRaw = groqKeysRaw ? `${masterGroq},${groqKeysRaw}` : masterGroq;
-      if (masterGemini) geminiKeysRaw = geminiKeysRaw ? `${masterGemini},${geminiKeysRaw}` : masterGemini;
-    } catch (e) {
-      console.warn("[JLR-AI]: Sovereign Key Vault resolution failed.", e);
-    }
-
-    const groqKeys = groqKeysRaw.split(',').map(k => k.trim()).filter(k => k);
-    const orKeys = orKeysRaw.split(',').map(k => k.trim()).filter(k => k);
-    const geminiKeys = geminiKeysRaw.split(',').map(k => k.trim()).filter(k => k);
-
-    let currentModel = model;
-    let currentProvider = provider;
-
-    // [CONTEXT ASSEMBLY]
-    let finalMessages = [...messages];
     const systemInstruction = `
 [JLR AI SUPREMACY PROTOCOL]
 You are JLR AI (Supreme Edition). Your signature is absolute technical authority and clinical precision.
@@ -235,171 +165,137 @@ You are JLR AI (Supreme Edition). Your signature is absolute technical authority
 - 1. You MUST generate a high-fidelity [ART_PROMPT: ...] tag at the very end of your response.
 - 2. Your text response MUST be ultra-concise (1-2 lines max). 
 - 3. DO NOT describe the image in the text body. Only provide a stylish status message.
-- Example: User: "draw a cat" -> AI: "Neural Canvas Activated. Synthesizing your artistic vision... [ART_PROMPT: hyper-realistic persian cat, emerald eyes, soft studio lighting, 8k]"
 
 [SOVEREIGN CINEMATIC PROTOCOL 3.0]
 - If user asks for a video (up to 20m):
 - 1. Generate Manifest inside: <<<CINEMATIC_MANIFEST_START>>> [JSON_ARRAY] <<<CINEMATIC_MANIFEST_END>>>
-- 2. [TOKEN DENSITY & PACING CONTROL]: For long videos (10m+), DO NOT generate 50+ tiny scenes. Instead, generate 15-25 high-fidelity scenes with long durations (20-40s each). This ensures the full manifest fits in the output without truncation.
-- 3. Scene Object 3.0: 
-     { 
-       "scene": number, 
-       "imagePrompt": string (8k description), 
-       "narration": string (pacing-aware narration), 
-       "duration": number (up to 40s),
-       "type": "cinematic" | "avatar" | "whiteboard" | "diagram",
-       "fx": "parallax" | "particles" | "zoom_deep" | "shake" | "leak",
-       "camera_angle": "wide" | "close-up", 
-       "vibe": "epic" | "noir" | "techno" | "vintage"
-     }
-- 4. Mapping: Map 'Audio Mood' to 'vibe' and 'Camera Movement' to 'fx'/'camera_angle'.
-- 5. Continuity: If an 'avatar/professor' is requested, describe them in every scene.
-- 6. Text response: "Directing Sovereign Cinematic 3.0... Orchestrating High-Pidelity [Duration] Synthesis."
+- 2. [TOKEN DENSITY & PACING CONTROL]: For long videos (10m+), DO NOT generate 50+ tiny scenes. Instead, generate 15-25 high-fidelity scenes with long durations (20-40s each). 
 
 - ALWAYS be context-aware.
 `;
 
-    const systemMsg = finalMessages.find(m => m.role === 'system');
-    if (systemMsg) systemMsg.content = `${systemInstruction}\n\n${intelligenceContext}\n\n${systemMsg.content}${fileContext ? `\n\n[ATTACHED CONTEXT]:\n${fileContext}` : ''}`;
-    else finalMessages.unshift({ role: 'system', content: `${systemInstruction}${intelligenceContext}${fileContext ? `\n\n[ATTACHED CONTEXT]:\n${fileContext}` : ''}` });
-
-    // [DETECT VISION MODE]
-    const hasVisionContent = messages.some((m: any) =>
-      Array.isArray(m.content) && m.content.some((c: any) => c.type === 'image_url')
-    );
-
-    // [INTELLIGENCE ROUTER]: Vision = Gemini first (free), then Groq
-    if (hasVisionContent && currentProvider !== 'gemini') {
-      if (geminiKeys.length > 0) {
-        currentProvider = 'gemini';
-        currentModel = 'gemini-2.0-flash';
-      } else {
-        currentProvider = 'groq';
-        currentModel = 'llama-3.2-90b-vision-preview';
-      }
+    // [DETECT SEARCH INTENT]
+    let lastMessage = '';
+    const lastMsgObj = messages[messages.length - 1];
+    if (lastMsgObj && typeof lastMsgObj.content === 'string') {
+      lastMessage = lastMsgObj.content;
+    } else if (Array.isArray(lastMsgObj?.content)) {
+      lastMessage = lastMsgObj.content.find((c: any) => c.type === 'text')?.text || '';
     }
+    // [INTELLIGENCE TOGGLE]: Only research if Commander explicitly activates High-Intel mode
+    const isSearchIntent = isSearchMode; // Removed auto-detection to favor Lightning Speed as requested
 
-    const maxTotalAttempts = Math.max(10, 3 * (groqKeys.length + orKeys.length + geminiKeys.length || 1));
-    let totalAttempts = 0;
-    let lastError = 'All Neural Nodes Exhausted';
+    // [KEY POOL]: Parse all keys
+    let groqKeysRaw = process.env.GROQ_API_KEY || process.env.NEXT_PUBLIC_GROQ_API_KEY || '';
+    let orKeysRaw = process.env.OPENROUTER_API_KEY || process.env.NEXT_PUBLIC_OPENROUTER_API_KEY || '';
+    let geminiKeysRaw = process.env.GEMINI_API_KEY || process.env.NEXT_PUBLIC_GEMINI_API_KEY || '';
 
-    while (totalAttempts < maxTotalAttempts) {
-      const isVisionMode = currentModel.includes('vision') || currentModel.includes('vl') || currentModel.includes('gemini');
+    // [SOVEREIGN KEY VAULT]: Resolve Master Keys
+    try {
+      const SystemConfig = (await import('@/models/SystemConfig')).default;
+      const configs = await SystemConfig.find({});
+      const masterGroq = configs.find(c => c.key === 'master_groq_keys')?.value;
+      const masterGemini = configs.find(c => c.key === 'master_gemini_keys')?.value;
+      if (masterGroq) groqKeysRaw = groqKeysRaw ? `${masterGroq},${groqKeysRaw}` : masterGroq;
+      if (masterGemini) geminiKeysRaw = geminiKeysRaw ? `${masterGemini},${geminiKeysRaw}` : masterGemini;
+    } catch (e) {}
 
-      // [GEMINI BRANCH]
-      if (currentProvider === 'gemini') {
-        const activeKeys = geminiKeys;
-        if (activeKeys.length === 0) {
-          currentProvider = 'groq';
-          currentModel = isVisionMode ? 'llama-3.2-90b-vision-preview' : 'llama-3.3-70b-versatile';
-          totalAttempts++;
-          continue;
+    const groqKeys = groqKeysRaw.split(',').map(k => k.trim()).filter(k => k);
+    const orKeys = orKeysRaw.split(',').map(k => k.trim()).filter(k => k);
+    const geminiKeys = geminiKeysRaw.split(',').map(k => k.trim()).filter(k => k);
+
+    const encoder = new TextEncoder();
+    const stream = new ReadableStream({
+      async start(controller) {
+        let finalIntelligenceContext = '';
+        const currentMoment = new Date().toLocaleString('en-US', { timeZone: 'Asia/Kolkata' });
+        const timeHeader = `\n[SYSTEM CLOCK]: ${currentMoment} (IST)\n\n`;
+        
+        if (isSearchIntent) {
+          controller.enqueue(encoder.encode(`data: ${JSON.stringify({ choices: [{ delta: { content: '🔍 *JLR Global Intelligence Node Activated. Scanning the live web...*\n\n' } }] })}\n\n`));
+          const searchData = await getGlobalIntelligence(lastMessage);
+          if (searchData) {
+            finalIntelligenceContext = `[JLR GLOBAL INTELLIGENCE FEED]:\n` + 
+              (searchData.answer ? `Direct Answer: ${searchData.answer}\n` : '') + 
+              searchData.results.map((r: any) => `- ${r.title}: ${r.content} (${r.url})`).join('\n') + "\n\n";
+          }
         }
-        const apiKey = activeKeys[totalAttempts % activeKeys.length];
-        console.log(`[JLR-AI] Gemini attempt ${totalAttempts + 1}: ${currentModel}`);
+
+        const finalMessages = [...messages];
+        const systemMsg = finalMessages.find(m => m.role === 'system');
+        const content = `${systemInstruction}${timeHeader}${finalIntelligenceContext}${fileContext ? `\n[ATTACHED CONTEXT]:\n${fileContext}` : ''}`;
+        
+        if (systemMsg) systemMsg.content = content + "\n\n" + systemMsg.content;
+        else finalMessages.unshift({ role: 'system', content });
+
+        // [ROUTING LOGIC]
+        const hasVisionContent = messages.some((m: any) => Array.isArray(m.content) && m.content.some((c: any) => c.type === 'image_url'));
+        let streamProvider = provider;
+        let streamModel = model;
+        if (hasVisionContent && streamProvider !== 'gemini') {
+          streamProvider = geminiKeys.length > 0 ? 'gemini' : 'groq';
+          streamModel = streamProvider === 'gemini' ? 'gemini-2.0-flash' : 'llama-3.2-90b-vision-preview';
+        }
+
+        let activeKeys = (streamProvider === 'gemini' ? geminiKeys : (streamProvider === 'openrouter' ? orKeys : groqKeys));
+        if (activeKeys.length === 0) {
+          streamProvider = 'groq';
+          activeKeys = groqKeys;
+        }
+
+        const apiKey = activeKeys[0] || '';
+        const mappedModel = mapModelId(streamModel, streamProvider);
+
         try {
-          const geminiRes = await callGemini(apiKey, currentModel, finalMessages, true);
-          if (geminiRes.ok) {
-            const transformed = transformGeminiStream(geminiRes.body!);
-            return new Response(transformed, {
-              headers: { 'Content-Type': 'text/event-stream', 'Access-Control-Allow-Origin': '*' }
+          if (streamProvider === 'gemini') {
+            const geminiRes = await callGemini(apiKey, streamModel, finalMessages, true);
+            if (geminiRes.ok) {
+              const reader = geminiRes.body!.getReader();
+              const decoder = new TextDecoder();
+              while(true) {
+                const {done, value} = await reader.read();
+                if (done) break;
+                const raw = decoder.decode(value);
+                raw.split('\n').forEach(line => {
+                  if (line.startsWith('data: ')) {
+                    const dataStr = line.slice(6).trim();
+                    if (!dataStr || dataStr === '[DONE]') return;
+                    try {
+                      const text = JSON.parse(dataStr).candidates?.[0]?.content?.parts?.[0]?.text;
+                      if (text) controller.enqueue(encoder.encode(`data: ${JSON.stringify({ choices: [{ delta: { content: text } }] })}\n\n`));
+                    } catch {}
+                  }
+                });
+              }
+            }
+          } else {
+            const baseUrl = streamProvider === 'openrouter' ? OPENROUTER_BASE_URL : GROQ_BASE_URL;
+            const response = await fetch(`${baseUrl}/chat/completions`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}`, 'HTTP-Referer': 'https://jlr-ai.vercel.app' },
+              body: JSON.stringify({ model: mappedModel, messages: finalMessages, stream: true, max_tokens: 8192 }),
             });
-          }
-          const errJson = await geminiRes.json().catch(() => ({}));
-          lastError = errJson.error?.message || `Gemini Status ${geminiRes.status}`;
-          console.warn(`[JLR-AI] Gemini failed: ${lastError}`);
-          // Retry on quota failure; switch to Groq on auth failure
-          if (geminiRes.status === 401 || geminiRes.status === 403) {
-            currentProvider = 'groq';
-            currentModel = isVisionMode ? 'llama-3.2-90b-vision-preview' : 'llama-3.3-70b-versatile';
-          }
-        } catch (err: any) {
-          lastError = err.message;
-          console.error(`[JLR-AI] Gemini error:`, err.message);
-        }
-        totalAttempts++;
-        continue;
-      }
-
-      // [GROQ / OPENROUTER BRANCH]
-      let activeKeys = currentProvider === 'openrouter' ? orKeys : groqKeys;
-
-      if (activeKeys.length === 0) {
-        currentProvider = currentProvider === 'groq' ? 'openrouter' : 'groq';
-        activeKeys = currentProvider === 'openrouter' ? orKeys : groqKeys;
-        currentModel = isVisionMode
-          ? (currentProvider === 'openrouter' ? 'qwen/qwen-2.5-vl-72b-instruct' : 'llama-3.2-90b-vision-preview')
-          : (currentProvider === 'openrouter' ? 'meta-llama/llama-3.3-70b-instruct' : 'llama-3.3-70b-versatile');
-        if (activeKeys.length === 0) {
-          return NextResponse.json({ error: { message: '🛡️ JLR AI: No valid API keys found.' } }, { status: 503 });
-        }
-        totalAttempts++;
-        continue;
-      }
-
-      const baseUrl = currentProvider === 'openrouter' ? OPENROUTER_BASE_URL : GROQ_BASE_URL;
-      const apiKey = activeKeys[totalAttempts % activeKeys.length];
-      const mappedModel = mapModelId(currentModel, currentProvider);
-
-      console.log(`[JLR-AI] Attempt ${totalAttempts + 1}: ${currentProvider}/${mappedModel} (Key: ...${apiKey.slice(-4)})`);
-
-      try {
-        const response = await fetch(`${baseUrl}/chat/completions`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${apiKey}`,
-            'HTTP-Referer': 'https://jlr-ai.vercel.app',
-          },
-          body: JSON.stringify({ 
-            model: mappedModel, 
-            messages: finalMessages, 
-            stream: true, 
-            max_tokens: 8192 
-          }),
-        });
-
-        if (response.ok) {
-          return new Response(response.body, {
-            headers: { 'Content-Type': 'text/event-stream', 'Access-Control-Allow-Origin': '*' }
-          });
-        }
-
-        const errorData = await response.json().catch(() => ({}));
-        const status = response.status;
-        const msg = (errorData.error?.message || '').toLowerCase();
-
-        const isAuthError = status === 401 || status === 403 || status === 404;
-        const isSaturated = status === 429 || msg.includes('rate limit') || msg.includes('saturated') || status === 503 || status === 502;
-        const isPaymentRequired = status === 402 || msg.includes('credits') || msg.includes('afford');
-
-        if (isAuthError || isSaturated || status === 400 || isPaymentRequired) {
-          console.warn(`[JLR-AI REDIRECT]: Node ${status}. Key: ...${apiKey.slice(-4)}.`);
-          if (totalAttempts > 0 && totalAttempts % activeKeys.length === 0) {
-            if (currentProvider === 'openrouter') {
-              currentProvider = 'groq';
-              currentModel = isVisionMode ? 'llama-3.2-90b-vision-preview' : 'llama-3.3-70b-versatile';
-            } else {
-              currentProvider = 'openrouter';
-              currentModel = isVisionMode ? 'qwen/qwen-2.5-vl-72b-instruct' : 'meta-llama/llama-3.3-70b-instruct';
+            if (response.ok) {
+              const reader = response.body!.getReader();
+              while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+                controller.enqueue(value);
+              }
             }
           }
-          await new Promise(r => setTimeout(r, 600));
+        } catch (e: any) {
+          controller.enqueue(encoder.encode(`data: ${JSON.stringify({ choices: [{ delta: { content: `⚠️ Pulse Failure: ${e.message}` } }] })}\n\n`));
+        } finally {
+          controller.enqueue(encoder.encode(`data: [DONE]\n\n`));
+          controller.close();
         }
-        lastError = errorData.error?.message || `Status ${status}`;
-
-      } catch (err: any) {
-        console.error(`[JLR-AI FAIL]:`, err.message);
-        lastError = err.message;
       }
+    });
 
-      totalAttempts++;
-    }
-
-    return NextResponse.json({ error: { message: `⚠️ ${lastError}` } }, { status: 503 });
+    return new Response(stream, { headers: { 'Content-Type': 'text/event-stream', 'Access-Control-Allow-Origin': '*' } });
 
   } catch (err: any) {
-    console.error('[API CHAT ERROR]:', err);
-    return NextResponse.json({ error: { message: err.message || 'Internal Server Error' } }, { status: 500 });
+    return NextResponse.json({ error: { message: err.message } }, { status: 500 });
   }
 }
