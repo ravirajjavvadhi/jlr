@@ -29,7 +29,8 @@ export default function AdminDashboard() {
 
   const fetchUsers = async () => {
     try {
-      const res = await fetch(`/api/admin/users?commander=raviraj`);
+      const commander = user?.username === 'raviraj' ? 'raviraj' : (user?.email || 'raviraj');
+      const res = await fetch(`/api/admin/users?commander=${encodeURIComponent(commander)}`);
       const data = await res.json();
       if (data.users) {
         setUsers(data.users);
@@ -47,11 +48,12 @@ export default function AdminDashboard() {
     setUpdatingId(userId);
     setStatus({ type: '', msg: '' });
     try {
+      const commander = user?.username === 'raviraj' ? 'raviraj' : (user?.email || 'raviraj');
       const res = await fetch('/api/admin/users', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          commander: 'raviraj',
+          commander,
           targetUserId: userId,
           keys: keys || null,
           geminiKeys: geminiKeys || null
@@ -73,7 +75,9 @@ export default function AdminDashboard() {
   };
 
   const filteredUsers = users.filter(u => {
-    const matchesSearch = u.username.toLowerCase().includes(searchTerm.toLowerCase());
+    if (!u) return false;
+    const username = (u.username || u.email || 'unknown').toLowerCase();
+    const matchesSearch = username.includes(searchTerm.toLowerCase());
     const hasKey = !!u.custom_api_key;
     if (filter === 'with-key') return matchesSearch && hasKey;
     if (filter === 'no-key') return matchesSearch && !hasKey;
@@ -276,7 +280,7 @@ export default function AdminDashboard() {
                   <span style={styles.badge(!!u.custom_api_key)}>{u.custom_api_key ? 'NODE LINKED' : 'LIMITED ACCESS'}</span>
                 </div>
                 <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.3)', fontWeight: 800 }}>
-                  ESTABLISHED: {u.created_at ? new Date(u.created_at).toLocaleDateString() : 'Syncing...'}
+                  ESTABLISHED: {u.createdAt ? new Date(u.createdAt).toLocaleDateString() : (u.created_at ? new Date(u.created_at).toLocaleDateString() : 'Syncing...')}
                 </div>
               </div>
 
