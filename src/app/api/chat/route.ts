@@ -148,15 +148,25 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const { messages, model, provider, fileContext, userId, isSearchMode } = body;
 
-    const lastMessage = messages[messages.length - 1]?.content || '';
+    let lastMessage = '';
+    const lastMsgObj = messages[messages.length - 1];
+    if (lastMsgObj && typeof lastMsgObj.content === 'string') {
+      lastMessage = lastMsgObj.content;
+    } else if (Array.isArray(lastMsgObj?.content)) {
+      lastMessage = lastMsgObj.content.find((c: any) => c.type === 'text')?.text || '';
+    }
+
     const isSearchIntent = isSearchMode || /today|date|time|current|latest|now|news|who is|what is|search/i.test(lastMessage);
     
-    let intelligenceContext = '';
+    // [SMART TIME NODE]: Always know the exact moment
+    const currentMoment = new Date().toLocaleString('en-US', { timeZone: 'Asia/Kolkata' });
+    let intelligenceContext = `\n[SYSTEM CLOCK]: ${currentMoment} (IST)\n\n`;
+
     if (isSearchIntent) {
       console.log(`[JLR-AI]: Activating Global Intelligence for: "${lastMessage}"`);
       const searchData = await getGlobalIntelligence(lastMessage);
       if (searchData) {
-        intelligenceContext = `\n\n[JLR GLOBAL INTELLIGENCE FEED]:\n` + 
+        intelligenceContext += `[JLR GLOBAL INTELLIGENCE FEED]:\n` + 
           (searchData.answer ? `Direct Answer: ${searchData.answer}\n` : '') + 
           searchData.results.map((r: any) => `- ${r.title}: ${r.content} (${r.url})`).join('\n');
       }

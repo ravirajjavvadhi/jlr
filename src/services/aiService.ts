@@ -51,6 +51,7 @@ export interface MessageOptions {
   fileContext?: string;
   userId?: string;
   responseLength?: 'auto' | 'concise' | 'medium' | 'long';
+  isSearchMode?: boolean;
   signal?: AbortSignal;
 }
 
@@ -121,7 +122,8 @@ export async function sendMessage(messages: any[], modelId: string, options: Mes
       ],
       provider: finalProvider,
       fileContext: fileContext,
-      userId: userId
+      userId: userId,
+      isSearchMode: options.isSearchMode
     };
 
     const response = await fetch('/api/chat', {
