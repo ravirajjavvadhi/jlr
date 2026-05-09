@@ -247,7 +247,7 @@ export default function SovereignCinematic({ manifestJson }: SovereignCinematicP
               </motion.div>
 
               {/* Hollywood Script Subs */}
-              <div style={{ position: 'absolute', bottom: '120px', insetX: '0', textAlign: 'center', zIndex: 60, padding: '0 80px' }}>
+              <div style={{ position: 'absolute', bottom: '120px', left: '0', right: '0', textAlign: 'center', zIndex: 60, padding: '0 80px' }}>
                 <motion.h2
                   initial={{ opacity: 0, y: 30 }}
                   animate={{ opacity: 1, y: 0 }}
