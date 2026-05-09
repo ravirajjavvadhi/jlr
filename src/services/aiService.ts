@@ -193,10 +193,9 @@ export async function sendMessage(messages: any[], modelId: string, options: Mes
 export async function analyzeImage(imageBase64: string, text: string, selectedModelId: string, options: MessageOptions = {}) {
   const { onToken, onDone, onError, userId } = options;
   
-  // [TRICK]: Try Groq vision FIRST as primary (user has local Groq keys).
-  // OpenRouter is secondary fallback (requires paid key).
+  // [TRICK]: Route natively to Gemini 2.0 Flash or OpenRouter. Groq vision is officially decommissioned.
   const VISION_ATTEMPTS = [
-    { provider: 'groq', model: 'llama-3.2-11b-vision-preview' },
+    { provider: 'gemini', model: 'gemini-2.0-flash' },
     { provider: 'openrouter', model: 'qwen/qwen-2.5-vl-72b-instruct' },
     { provider: 'openrouter', model: 'meta-llama/llama-3.2-90b-vision-instruct' },
   ];

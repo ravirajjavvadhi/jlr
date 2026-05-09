@@ -233,8 +233,12 @@ You are JLR AI (Supreme Edition). Your signature is absolute technical authority
         let streamProvider = provider;
         let streamModel = model;
         if (hasVisionContent && streamProvider !== 'gemini') {
-          streamProvider = geminiKeys.length > 0 ? 'gemini' : 'groq';
-          streamModel = streamProvider === 'gemini' ? 'gemini-2.0-flash' : 'llama-3.2-11b-vision-preview';
+          if (streamProvider === 'openrouter' && orKeys.length > 0) {
+             // Respect OpenRouter vision request
+          } else {
+            streamProvider = geminiKeys.length > 0 ? 'gemini' : 'openrouter';
+            streamModel = streamProvider === 'gemini' ? 'gemini-2.0-flash' : 'qwen/qwen-2.5-vl-72b-instruct';
+          }
         }
 
         let activeKeys = (streamProvider === 'gemini' ? geminiKeys : (streamProvider === 'openrouter' ? orKeys : groqKeys));
@@ -251,6 +255,14 @@ You are JLR AI (Supreme Edition). Your signature is absolute technical authority
 
         while (attempts < maxAttempts && !success) {
           activeKeys = (streamProvider === 'gemini' ? geminiKeys : (streamProvider === 'openrouter' ? orKeys : groqKeys));
+          
+          // [CRITICAL FIX]: Groq has NO vision models. Force Gemini if OR has no keys for vision.
+          if (activeKeys.length === 0 && hasVisionContent) {
+             streamProvider = 'gemini';
+             activeKeys = geminiKeys;
+             streamModel = 'gemini-2.0-flash';
+          }
+          
           if (activeKeys.length === 0) {
             streamProvider = 'groq';
             activeKeys = groqKeys;
@@ -285,8 +297,8 @@ You are JLR AI (Supreme Edition). Your signature is absolute technical authority
               } else {
                 const status = geminiRes.status;
                 if (status === 429 || status === 401 || status === 403) {
-                    streamProvider = 'groq';
-                    streamModel = hasVisionContent ? 'llama-3.2-11b-vision-preview' : 'llama-3.3-70b-versatile';
+                    streamProvider = 'openrouter';
+                    streamModel = hasVisionContent ? 'qwen/qwen-2.5-vl-72b-instruct' : 'llama-3.3-70b-versatile';
                 }
                 attempts++;
                 await new Promise(r => setTimeout(r, 600));
@@ -320,8 +332,8 @@ You are JLR AI (Supreme Edition). Your signature is absolute technical authority
                 if (isAuthError || isSaturated || status === 402) {
                    if (attempts > 0 && attempts % activeKeys.length === 0) {
                      if (streamProvider === 'openrouter') {
-                       streamProvider = 'groq';
-                       streamModel = hasVisionContent ? 'llama-3.2-11b-vision-preview' : 'llama-3.3-70b-versatile';
+                       streamProvider = 'gemini';
+                       streamModel = hasVisionContent ? 'gemini-2.0-flash' : 'llama-3.3-70b-versatile';
                      } else {
                        streamProvider = 'openrouter';
                        streamModel = hasVisionContent ? 'qwen/qwen-2.5-vl-72b-instruct' : 'meta-llama/llama-3.3-70b-instruct';
