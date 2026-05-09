@@ -70,12 +70,11 @@ export async function sendMessage(messages: any[], modelId: string, options: Mes
   const name = (typeof window !== 'undefined' && localStorage.getItem('user_name')) || 'Commander';
   const finalSystemPrompt = SYSTEM_PROMPT_BASE.replace('{USER_NAME}', name) + `\n\n[LENGTH PRIORITY]: ${lengthInstruction}`;
   
-  // [CONTEXT PRUNER]: Keep only last 6 messages to avoid 100k+ token saturation
-  let prunedMessages = messages.slice(-6);
+  // [CONTEXT PRUNER]: Increase depth to 20 messages for better continuity
+  let prunedMessages = messages.slice(-20);
 
-  // [NEURAL OPTIMIZATION]: Strip Base64 images from historical context to prevent massive payload token explosion
+  // [NEURAL OPTIMIZATION]: Strip Base64 images from historical context
   prunedMessages = prunedMessages.map((msg, index) => {
-    // Keep image only in the very last user message (the current query)
     if (index < prunedMessages.length - 1 && Array.isArray(msg.content)) {
        const mappedContent = msg.content.map((c: any) => {
          if (c.type === 'image_url') return { type: 'text', text: '[PAST IMAGE OMITTED TO SAVE NEURAL BANDWIDTH]' };
@@ -94,7 +93,6 @@ export async function sendMessage(messages: any[], modelId: string, options: Mes
   const orKey = getStoredApiKey('openrouter');
   const groqKey = getStoredApiKey('groq');
   
-  // [SMART ROUTER] - Automatically allocate best model based on content
   // Look at the CURRENT query for images
   const currentMsg = prunedMessages[prunedMessages.length - 1];
   const hasImages = currentMsg && Array.isArray(currentMsg.content) && currentMsg.content.some((c: any) => typeof c === 'object' && c.type === 'image_url');
@@ -110,7 +108,6 @@ export async function sendMessage(messages: any[], modelId: string, options: Mes
     finalProvider = 'openrouter';
     finalModelId = 'deepseek/deepseek-chat'; 
   } else {
-    // Check if selected model is still valid
     const isGroqModel = modelId.includes('versatile') || modelId.includes('instant');
     finalProvider = ((isGroqModel && groqKey) ? 'groq' : (orKey ? 'openrouter' : 'groq'));
   }
@@ -142,15 +139,22 @@ export async function sendMessage(messages: any[], modelId: string, options: Mes
     const reader = response.body!.getReader();
     const decoder = new TextDecoder();
     let fullText = '';
+    let buffer = ''; // [CRITICAL]: Line buffer to handle partial network packets
+
     while (true) {
       const { done, value } = await reader.read();
       if (done) break;
-      const raw = decoder.decode(value);
       
-      const lines = raw.split('\n');
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split('\n');
+      
+      // Keep only the potentially incomplete last line in the buffer
+      buffer = lines.pop() || '';
+      
       for (const line of lines) {
-        if (line.startsWith('data: ')) {
-          const data = line.slice(6).trim();
+        const trimmed = line.trim();
+        if (trimmed.startsWith('data: ')) {
+          const data = trimmed.slice(6).trim();
           if (data === '[DONE]') break;
           try {
             const parsed = JSON.parse(data);
@@ -159,7 +163,7 @@ export async function sendMessage(messages: any[], modelId: string, options: Mes
               fullText += content;
               onToken && onToken(content);
             }
-          } catch { }
+          } catch { } // Ignore partial or invalid JSON in a single line
         }
       }
     }
@@ -235,20 +239,28 @@ export async function analyzeImage(imageBase64: string, text: string, selectedMo
       const reader = response.body!.getReader();
       const decoder = new TextDecoder();
       let fullText = '';
+      let buffer = ''; // [CRITICAL]: Line buffer for vision node stability
       
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
-        const raw = decoder.decode(value);
-        const lines = raw.split('\n');
+        
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || '';
+        
         for (const line of lines) {
-           if (line.startsWith('data: ')) {
-             const data = line.slice(6).trim();
+           const trimmed = line.trim();
+           if (trimmed.startsWith('data: ')) {
+             const data = trimmed.slice(6).trim();
              if (data === '[DONE]') break;
              try {
                const parsed = JSON.parse(data);
                const content = parsed.choices?.[0]?.delta?.content;
-               if (content) { fullText += content; onToken && onToken(content); }
+               if (content) { 
+                 fullText += content; 
+                 onToken && onToken(content); 
+               }
              } catch {}
            }
         }

@@ -286,7 +286,12 @@ You are JLR AI (Supreme Edition). Your signature is absolute technical authority
             'Authorization': `Bearer ${apiKey}`,
             'HTTP-Referer': 'https://jlr-ai.vercel.app',
           },
-          body: JSON.stringify({ model: mappedModel, messages: finalMessages, stream: true, max_tokens: 4096 }),
+          body: JSON.stringify({ 
+            model: mappedModel, 
+            messages: finalMessages, 
+            stream: true, 
+            max_tokens: 8192 
+          }),
         });
 
         if (response.ok) {
