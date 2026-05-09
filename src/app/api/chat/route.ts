@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { sql } from '@/services/postgres';
+import connectToDatabase from '@/services/mongodb';
+import User from '@/models/User';
 
 export const maxDuration = 60;
 
@@ -130,18 +131,19 @@ export async function POST(req: NextRequest) {
     // [PERSONAL NEURAL LINK]: Resolve user-specific keys from DB
     if (userId && userId !== 'guest') {
       try {
-        const userResult = await sql`SELECT custom_api_key, gemini_api_keys FROM users WHERE id = ${userId}`;
-        if (userResult[0]?.custom_api_key) {
+        await connectToDatabase();
+        const userNode = await User.findOne({ _id: userId });
+        if (userNode?.custom_api_key) {
           // User's Groq keys override the global pool
-          groqKeysRaw = userResult[0].custom_api_key;
+          groqKeysRaw = userNode.custom_api_key;
         }
-        if (userResult[0]?.gemini_api_keys) {
+        if (userNode?.gemini_api_keys && userNode.gemini_api_keys.length > 0) {
           // User's Gemini keys PREPEND to global pool (user keys tried first)
-          const userGeminiKeys = userResult[0].gemini_api_keys;
+          const userGeminiKeys = userNode.gemini_api_keys.join(',');
           geminiKeysRaw = geminiKeysRaw ? `${userGeminiKeys},${geminiKeysRaw}` : userGeminiKeys;
         }
       } catch (e) {
-        console.warn("[JLR-AI]: Personal Link resolution failed.");
+        console.warn("[JLR-AI]: Personal Link resolution failed.", e);
       }
     }
 

@@ -87,12 +87,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           const res = await fetch(`/api/db/chats?userId=${initialUser.id}`);
           if (res.ok) {
             const data = await res.json();
-            const cloud: Chat[] = data.chats.map((c: any) => ({
+            const cloudRaw = Array.isArray(data.chats) ? data.chats : [];
+            
+            const cloud: Chat[] = cloudRaw.map((c: any) => ({
               id: c.id,
-              title: c.title,
-              messages: c.messages,
-              model: c.model || 'JLR-SUPREME-ULTRA',
-              updatedAt: new Date(c.updated_at).getTime()
+              title: c.title || 'New Power Session',
+              messages: Array.isArray(c.messages) ? c.messages : [],
+              model: c.aiModel || c.model || 'JLR-SUPREME-ULTRA',
+              updatedAt: new Date(c.updatedAt || c.updated_at || Date.now()).getTime()
             }));
 
             // [SOVEREIGN MERGE]: Synchronize Cloud Archive with Local Node
