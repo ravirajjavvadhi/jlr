@@ -19,10 +19,11 @@ export default function AdminDashboard() {
 
   // [SECURITY BLOCK]: Absolute Authority Check
   useEffect(() => {
-    const isAdmin = user && (user.username === 'ravirajjavvadi' || user.email === 'ravirajjavvadi@gmail.com');
+    const validAdmins = ['ravirajjavvadi', 'raviraj javvadi', 'raviraj', 'ravirajjavvadi@gmail.com'];
+    const isAdmin = user && (validAdmins.includes(user.username.toLowerCase()) || validAdmins.includes(user.email?.toLowerCase() || ''));
     if (!isAdmin) {
       const timer = setTimeout(() => {
-        if (!user || (user.username !== 'ravirajjavvadi' && user.email !== 'ravirajjavvadi@gmail.com')) router.push('/');
+        if (!user || (!validAdmins.includes(user.username.toLowerCase()) && !validAdmins.includes(user.email?.toLowerCase() || ''))) router.push('/');
       }, 1500);
       return () => clearTimeout(timer);
     }

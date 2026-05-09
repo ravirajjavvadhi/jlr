@@ -8,8 +8,9 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
     const commander = searchParams.get('commander');
 
-    if (commander !== 'ravirajjavvadi' && commander !== 'ravirajjavvadi@gmail.com') {
-      return NextResponse.json({ error: 'Access Denied' }, { status: 403 });
+    const validAdmins = ['ravirajjavvadi', 'raviraj javvadi', 'raviraj', 'ravirajjavvadi@gmail.com'];
+    if (!validAdmins.includes(commander?.toLowerCase() || '')) {
+      return NextResponse.json({ error: 'ACCESS DENIED: SUPREME AUTHORITY REQUIRED.' }, { status: 403 });
     }
 
     const configs = await SystemConfig.find({});
@@ -24,8 +25,9 @@ export async function POST(req: NextRequest) {
     await connectToDatabase();
     const { commander, key, value } = await req.json();
 
-    if (commander !== 'ravirajjavvadi' && commander !== 'ravirajjavvadi@gmail.com') {
-      return NextResponse.json({ error: 'Access Denied' }, { status: 403 });
+    const validAdmins = ['ravirajjavvadi', 'raviraj javvadi', 'raviraj', 'ravirajjavvadi@gmail.com'];
+    if (!validAdmins.includes(commander?.toLowerCase() || '')) {
+      return NextResponse.json({ error: 'ACCESS DENIED: SUPREME AUTHORITY REQUIRED.' }, { status: 403 });
     }
 
     await SystemConfig.findOneAndUpdate(

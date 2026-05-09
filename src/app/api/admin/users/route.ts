@@ -9,8 +9,9 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
     const commander = searchParams.get('commander');
     
-    if (commander !== 'ravirajjavvadi' && commander !== 'ravirajjavvadi@gmail.com') {
-      return NextResponse.json({ error: 'Access Denied: Supreme Authority required.' }, { status: 403 });
+    const validAdmins = ['ravirajjavvadi', 'raviraj javvadi', 'raviraj', 'ravirajjavvadi@gmail.com'];
+    if (!validAdmins.includes(commander?.toLowerCase() || '')) {
+      return NextResponse.json({ error: 'ACCESS DENIED: SUPREME AUTHORITY REQUIRED.' }, { status: 403 });
     }
 
     const usersRaw = await User.find({}).sort({ createdAt: -1 });
@@ -36,8 +37,9 @@ export async function POST(req: NextRequest) {
     await connectToDatabase();
     const { commander, targetUserId, keys, geminiKeys } = await req.json();
 
-    if (commander !== 'raviraj') {
-      return NextResponse.json({ error: 'Access Denied: Supreme Authority required.' }, { status: 403 });
+    const validAdmins = ['ravirajjavvadi', 'raviraj javvadi', 'raviraj', 'ravirajjavvadi@gmail.com'];
+    if (!validAdmins.includes(commander?.toLowerCase() || '')) {
+      return NextResponse.json({ error: 'ACCESS DENIED: SUPREME AUTHORITY REQUIRED.' }, { status: 403 });
     }
 
     if (!targetUserId) {

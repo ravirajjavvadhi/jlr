@@ -237,59 +237,109 @@ You are JLR AI (Supreme Edition). Your signature is absolute technical authority
           streamModel = streamProvider === 'gemini' ? 'gemini-2.0-flash' : 'llama-3.2-90b-vision-preview';
         }
 
-        let activeKeys = (streamProvider === 'gemini' ? geminiKeys : (streamProvider === 'openrouter' ? orKeys : groqKeys));
-        if (activeKeys.length === 0) {
-          streamProvider = 'groq';
-          activeKeys = groqKeys;
-        }
+        const maxAttempts = Math.max(10, 3 * ((groqKeys.length + orKeys.length + geminiKeys.length) || 1));
+        let attempts = 0;
+        let success = false;
+        let lastErrorMsg = 'All Neural Nodes Exhausted';
 
-        const apiKey = activeKeys[0] || '';
-        const mappedModel = mapModelId(streamModel, streamProvider);
-
-        try {
-          if (streamProvider === 'gemini') {
-            const geminiRes = await callGemini(apiKey, streamModel, finalMessages, true);
-            if (geminiRes.ok) {
-              const reader = geminiRes.body!.getReader();
-              const decoder = new TextDecoder();
-              while(true) {
-                const {done, value} = await reader.read();
-                if (done) break;
-                const raw = decoder.decode(value);
-                raw.split('\n').forEach(line => {
-                  if (line.startsWith('data: ')) {
-                    const dataStr = line.slice(6).trim();
-                    if (!dataStr || dataStr === '[DONE]') return;
-                    try {
-                      const text = JSON.parse(dataStr).candidates?.[0]?.content?.parts?.[0]?.text;
-                      if (text) controller.enqueue(encoder.encode(`data: ${JSON.stringify({ choices: [{ delta: { content: text } }] })}\n\n`));
-                    } catch {}
-                  }
-                });
-              }
-            }
-          } else {
-            const baseUrl = streamProvider === 'openrouter' ? OPENROUTER_BASE_URL : GROQ_BASE_URL;
-            const response = await fetch(`${baseUrl}/chat/completions`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}`, 'HTTP-Referer': 'https://jlr-ai.vercel.app' },
-              body: JSON.stringify({ model: mappedModel, messages: finalMessages, stream: true, max_tokens: 8192 }),
-            });
-            if (response.ok) {
-              const reader = response.body!.getReader();
-              while (true) {
-                const { done, value } = await reader.read();
-                if (done) break;
-                controller.enqueue(value);
-              }
-            }
+        while (attempts < maxAttempts && !success) {
+          let activeKeys = (streamProvider === 'gemini' ? geminiKeys : (streamProvider === 'openrouter' ? orKeys : groqKeys));
+          if (activeKeys.length === 0) {
+            streamProvider = 'groq';
+            activeKeys = groqKeys;
           }
-        } catch (e: any) {
-          controller.enqueue(encoder.encode(`data: ${JSON.stringify({ choices: [{ delta: { content: `⚠️ Pulse Failure: ${e.message}` } }] })}\n\n`));
-        } finally {
-          controller.enqueue(encoder.encode(`data: [DONE]\n\n`));
-          controller.close();
+
+          const apiKey = activeKeys[attempts % activeKeys.length] || '';
+          const mappedModel = mapModelId(streamModel, streamProvider);
+
+          try {
+            if (streamProvider === 'gemini') {
+              const geminiRes = await callGemini(apiKey, streamModel, finalMessages, true);
+              if (geminiRes.ok) {
+                success = true;
+                const reader = geminiRes.body!.getReader();
+                const decoder = new TextDecoder();
+                while(true) {
+                  const {done, value} = await reader.read();
+                  if (done) break;
+                  const raw = decoder.decode(value);
+                  raw.split('\n').forEach(line => {
+                    if (line.startsWith('data: ')) {
+                      const dataStr = line.slice(6).trim();
+                      if (!dataStr || dataStr === '[DONE]') return;
+                      try {
+                        const text = JSON.parse(dataStr).candidates?.[0]?.content?.parts?.[0]?.text;
+                        if (text) controller.enqueue(encoder.encode(`data: ${JSON.stringify({ choices: [{ delta: { content: text } }] })}\n\n`));
+                      } catch {}
+                    }
+                  });
+                }
+                break;
+              } else {
+                const status = geminiRes.status;
+                if (status === 429 || status === 401 || status === 403) {
+                    streamProvider = 'groq';
+                    streamModel = hasVisionContent ? 'llama-3.2-90b-vision-preview' : 'llama-3.3-70b-versatile';
+                }
+                attempts++;
+                await new Promise(r => setTimeout(r, 600));
+              }
+            } else {
+              const baseUrl = streamProvider === 'openrouter' ? OPENROUTER_BASE_URL : GROQ_BASE_URL;
+              const response = await fetch(`${baseUrl}/chat/completions`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}`, 'HTTP-Referer': 'https://jlr-ai.vercel.app' },
+                body: JSON.stringify({ model: mappedModel, messages: finalMessages, stream: true, max_tokens: 8192 }),
+              });
+              
+              if (response.ok) {
+                success = true;
+                const reader = response.body!.getReader();
+                while (true) {
+                  const { done, value } = await reader.read();
+                  if (done) break;
+                  controller.enqueue(value);
+                }
+                break;
+              } else {
+                const errText = await response.text();
+                let msg = errText;
+                try { msg = JSON.parse(errText).error?.message || errText; } catch {}
+                lastErrorMsg = msg;
+                const status = response.status;
+                const isAuthError = status === 401 || status === 403 || status === 404;
+                const isSaturated = status === 429 || msg.toLowerCase().includes('rate limit') || status >= 500;
+                
+                if (isAuthError || isSaturated || status === 402) {
+                   if (attempts > 0 && attempts % activeKeys.length === 0) {
+                     if (streamProvider === 'openrouter') {
+                       streamProvider = 'groq';
+                       streamModel = hasVisionContent ? 'llama-3.2-90b-vision-preview' : 'llama-3.3-70b-versatile';
+                     } else {
+                       streamProvider = 'openrouter';
+                       streamModel = hasVisionContent ? 'qwen/qwen-2.5-vl-72b-instruct' : 'meta-llama/llama-3.3-70b-instruct';
+                     }
+                   }
+                   attempts++;
+                   await new Promise(r => setTimeout(r, 600));
+                   continue;
+                } else {
+                   break; // Fatal error or bad request
+                }
+              }
+            }
+          } catch (e: any) {
+            lastErrorMsg = e.message;
+            attempts++;
+          }
         }
+
+        if (!success) {
+           controller.enqueue(encoder.encode(`data: ${JSON.stringify({ choices: [{ delta: { content: `⚠️ Neural Pipeline Interrupted: ${lastErrorMsg}` } }] })}\n\n`));
+        }
+
+        controller.enqueue(encoder.encode(`data: [DONE]\n\n`));
+        controller.close();
       }
     });
 
