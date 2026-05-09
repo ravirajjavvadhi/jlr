@@ -171,11 +171,19 @@ export default function SovereignCinematic({ manifestJson }: SovereignCinematicP
     }
   };
 
-  if (isLoadingManifest) return <div className="hologram-card" style={{ padding: '60px', textAlign: 'center' }}><Loader2 size={40} className="animate-spin" style={{ color: '#00ff9d', margin: '0 auto' }} /><p style={{ fontSize: '0.6rem', letterSpacing: '2px', color: '#00ff9d', marginTop: '20px' }}>LINKING CINEMA TERMINAL...</p></div>;
-  if (error) return <div className="error-alert">{error}</div>;
-
   const scene = scenes[currentSceneIndex];
-  if (!scene && !isLoadingManifest) return null;
+  
+  if (isLoadingManifest || (scenes.length === 0 && manifestJson.includes('<<<CINEMATIC_MANIFEST_START>>>'))) {
+    return (
+      <div className="hologram-card" style={{ padding: '60px', textAlign: 'center', background: 'rgba(0,0,0,0.5)', borderRadius: '40px', border: '1px solid rgba(0,255,157,0.2)' }}>
+        <Loader2 size={40} className="animate-spin" style={{ color: '#00ff9d', margin: '0 auto' }} />
+        <p style={{ fontSize: '0.7rem', fontWeight: 900, color: '#00ff9d', marginTop: '20px', letterSpacing: '4px' }}>SYNTHESIZING CINEMATIC SCENES...</p>
+        <p style={{ fontSize: '0.5rem', color: 'rgba(255,255,255,0.3)', marginTop: '8px' }}>NEURAL CORE PROCESSING ARCHIVE</p>
+      </div>
+    );
+  }
+
+  if (error || !scene) return null;
 
   const progress = scenes.length > 0 ? ((currentSceneIndex + 1) / scenes.length) * 100 : 0;
 

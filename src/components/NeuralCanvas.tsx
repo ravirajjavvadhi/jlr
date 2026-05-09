@@ -16,10 +16,12 @@ export default function NeuralCanvas({ prompt }: NeuralCanvasProps) {
   const [seed] = useState(Math.floor(Math.random() * 1000000));
 
   useEffect(() => {
-    // [SOVEREIGN ENGINE]: Hidden Pollinations fetch
-    const encoded = encodeURIComponent(prompt);
-    // Use width/height to ensure high quality
-    const url = `https://image.pollinations.ai/prompt/${encoded}?width=1024&height=1024&nologo=true&seed=${seed}`;
+    // [SOVEREIGN ENGINE]: Precision Art Synthesis
+    const cleanPrompt = prompt || "Majestic AI Visionary Portrait";
+    const encoded = encodeURIComponent(cleanPrompt);
+    
+    // Use Flux for absolute cinematic supremacy
+    const url = `https://image.pollinations.ai/prompt/${encoded}?width=1024&height=1024&nologo=true&seed=${seed}&model=flux`;
     setImageUrl(url);
     setIsLoading(true);
     setError(false);
@@ -118,8 +120,14 @@ export default function NeuralCanvas({ prompt }: NeuralCanvasProps) {
           />
 
           {error && (
-            <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'rgba(255,100,100,0.5)', fontSize: '0.7rem', fontWeight: 800 }}>
-              NEURAL UPLINK FAILED
+            <div style={{ height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '15px', justifyContent: 'center', background: 'rgba(255,100,100,0.05)' }}>
+              <div style={{ color: 'rgba(255,100,100,0.5)', fontSize: '0.7rem', fontWeight: 800, letterSpacing: '2px' }}>UPLINK SIGNAL UNSTABLE</div>
+              <button 
+                onClick={(e) => { e.stopPropagation(); setIsLoading(true); setError(false); }}
+                style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', padding: '6px 12px', borderRadius: '8px', fontSize: '0.6rem', fontWeight: 900, cursor: 'pointer' }}
+              >
+                RE-STABILIZE SYNERGY
+              </button>
             </div>
           )}
 
