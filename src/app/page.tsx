@@ -422,17 +422,17 @@ Requirements:
                                 p: ({ children }) => <div style={{ marginBottom: '1.25rem' }}>{children}</div> 
                               }}
                             >
-                              {msg.content
+                              {(msg.content || '')
                                 .replace(/\[ART_PROMPT:\s*(.*?)\]/g, '')
-                                .replace(/<<<CINEMATIC_MANIFEST_START>>>[\s\S]*?<<<CINEMATIC_MANIFEST_END>>>/g, '')}
+                                .replace(/<<<CINEMATIC_MANIFEST_START>>>[\s\S]*?(?:<<<CINEMATIC_MANIFEST_END>>>|$)/g, '')}
                             </ReactMarkdown>
 
-                            {msg.content.match(/\[ART_PROMPT:\s*(.*?)\]/) && (
-                              <NeuralCanvas prompt={msg.content.match(/\[ART_PROMPT:\s*(.*?)\]/)?.[1] || ''} />
+                            {msg.content?.match(/\[ART_PROMPT:\s*(.*?)\]/) && (
+                              <NeuralCanvas prompt={msg.content?.match(/\[ART_PROMPT:\s*(.*?)\]/)?.[1] || ''} />
                             )}
 
                             {(() => {
-                              const manifestMatch = msg.content.match(/<<<CINEMATIC_MANIFEST_START>>>([\s\S]*?)(?:<<<CINEMATIC_MANIFEST_END>>>|$)/);
+                              const manifestMatch = msg.content?.match(/<<<CINEMATIC_MANIFEST_START>>>([\s\S]*?)(?:<<<CINEMATIC_MANIFEST_END>>>|$)/);
                               if (manifestMatch) {
                                 return <SovereignCinematic manifestJson={manifestMatch[1].trim()} />;
                               }
@@ -441,7 +441,7 @@ Requirements:
                           </>
                         ) : (
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                            <p style={{ whiteSpace: 'pre-wrap', fontSize: '1.05rem', color: '#fff', lineHeight: 1.6 }}>{msg.content}</p>
+                            <p style={{ whiteSpace: 'pre-wrap', fontSize: '1.05rem', color: '#fff', lineHeight: 1.6 }}>{msg.content || ''}</p>
                             {msg.attachments?.map((at: any, i: number) => (
                               <div key={i} style={{ fontSize: '0.7rem', opacity: 0.5, display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                                 <Sparkles size={10} /> {at.name} ({at.type.toUpperCase()})

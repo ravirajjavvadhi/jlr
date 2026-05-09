@@ -58,7 +58,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [chats, setChats] = useState<Chat[]>([]);
   const [currentChatId, setCurrentChatId] = useState<string | null>(null);
 
-  // ─── Identity Synchronization ──────────────────────────────────────────
+  // ─── Identity & URL Synchronization ──────────────────────────────────────────
   useEffect(() => {
     const initIdentity = async () => {
       setLoading(true);
@@ -70,7 +70,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
       
       setUser(initialUser);
-      // Immediately load local namespaced cache to prevent 1-2s disappearing act
+      
+      // Load currentChatId from URL if present
+      if (typeof window !== 'undefined') {
+        const params = new URLSearchParams(window.location.search);
+        const urlId = params.get('c');
+        if (urlId) setCurrentChatId(urlId);
+      }
+
+      // Immediately load local namespaced cache
       const locals = loadLocalChats(initialUser.id);
       setChats(locals);
 
@@ -89,9 +97,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
             // [SOVEREIGN MERGE]: Synchronize Cloud Archive with Local Node
             setChats(prev => {
-              const cloudMap = new Map<string, Chat>(cloud.map(c => [c.id, c]));
-              const localMap = new Map<string, Chat>(prev.map(c => [c.id, c]));
-              
               const mergedMap = new Map<string, Chat>();
               
               // 1. Add cloud chats (Source of Truth)
@@ -100,11 +105,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               // 2. Add local-only chats if they have content OR are currently active
               prev.forEach(c => {
                 if (!mergedMap.has(c.id)) {
+                  // ONLY keep local if it has messages OR is the one in the URL
                   if (c.messages.length > 0 || c.id === currentChatId) {
                     mergedMap.set(c.id, c);
                   }
                 } else {
-                  // Resolve conflict: Use cloud unless local is significantly newer/larger
+                  // Resolve conflict: Use local if it has more messages (active session)
                   const cloudVer = mergedMap.get(c.id)!;
                   if (c.messages.length > cloudVer.messages.length) {
                     mergedMap.set(c.id, c);
@@ -113,7 +119,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               });
 
               const final = Array.from(mergedMap.values())
-               .filter(c => c.messages.length > 0 || c.id === currentChatId) // Absolute purge of ghosts
                .sort((a,b) => b.updatedAt - a.updatedAt);
                
               saveLocalChats(final, initialUser.id);
@@ -129,6 +134,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     initIdentity();
   }, []);
+
+  // [URL PERSISTENCE]: Update URL when currentChatId changes
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    if (currentChatId) {
+      if (params.get('c') !== currentChatId) {
+        params.set('c', currentChatId);
+        window.history.pushState({}, '', `${window.location.pathname}?${params.toString()}`);
+      }
+    } else {
+      if (params.has('c')) {
+        params.delete('c');
+        window.history.pushState({}, '', `${window.location.pathname}${params.toString() ? '?' + params.toString() : ''}`);
+      }
+    }
+  }, [currentChatId]);
 
 
   // ─── Auth Methods ─────────────────────────────────────────────────────────
@@ -187,6 +209,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // ─── Chat Actions ─────────────────────────────────────────────────────────
   const createNewChat = async (): Promise<string> => {
+    // [GHOST PREVENTION]: Reuse existing empty session if available
+    const existingEmpty = chats.find(c => c.messages.length === 0);
+    if (existingEmpty) {
+      setCurrentChatId(existingEmpty.id);
+      return existingEmpty.id;
+    }
+
     const tempId = `session_${Date.now()}`;
     const chatData: Chat = {
       id: tempId,
@@ -197,8 +226,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
 
     setChats(prev => {
-      // Prevent duplicate creation of the same temp ID in rapid state updates
-      if (prev.some(c => c.id === tempId)) return prev;
       const updated = [chatData, ...prev];
       saveLocalChats(updated, user?.id);
       return updated;
@@ -253,6 +280,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const deleteChat = async (chatId: string) => {
+    if (currentChatId === chatId) {
+      setCurrentChatId(null);
+    }
+
     setChats(prev => {
       const updated = prev.filter(c => c.id !== chatId);
       saveLocalChats(updated, user?.id);
@@ -262,7 +293,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (user && !user.isGuest) {
       fetch(`/api/db/chats?chatId=${chatId}`, { method: 'DELETE' }).catch(console.error);
     }
-    if (currentChatId === chatId) setCurrentChatId(null);
   };
 
 
