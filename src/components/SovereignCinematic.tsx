@@ -208,17 +208,17 @@ export default function SovereignCinematic({ manifestJson }: SovereignCinematicP
   };
 
   return (
-    <div style={{ marginTop: '20px', width: '100%', maxWidth: '900px' }}>
+    <div className="cinematic-root" style={{ marginTop: '20px', width: '100%', maxWidth: '900px' }}>
       <motion.div
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
         style={{
           position: 'relative',
-          borderRadius: '40px',
+          borderRadius: '24px',
           overflow: 'hidden',
           background: '#000',
           border: '1px solid rgba(255,255,255,0.15)',
-          boxShadow: '0 80px 150px rgba(0,0,0,1)'
+          boxShadow: '0 40px 80px rgba(0,0,0,0.8)'
         }}
       >
         {/* Cinema 3.0 Overlays */}
@@ -247,24 +247,24 @@ export default function SovereignCinematic({ manifestJson }: SovereignCinematicP
         <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 28, background: 'url("https://www.transparenttextures.com/patterns/p6.png")', opacity: 0.05 }} />
 
         {/* Header (Director GUI) */}
-        <div style={{ 
-          position: 'absolute', top: 0, left: 0, right: 0, height: '100px', 
-          background: 'linear-gradient(to bottom, rgba(0,0,0,0.95), transparent)', zIndex: 50,
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 40px'
+        <div className="cinematic-header" style={{ 
+          position: 'absolute', top: 0, left: 0, right: 0, zIndex: 50,
+          background: 'linear-gradient(to bottom, rgba(0,0,0,0.95), transparent)',
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between'
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-             <PlayCircle size={32} color="#00ff9d" />
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+             <PlayCircle className="header-icon" size={24} color="#00ff9d" />
              <div>
-                <h4 style={{ margin: 0, fontSize: '0.85rem', fontWeight: 900, color: '#fff', letterSpacing: '3px' }}>SOVEREIGN CINEMATIC 3.0</h4>
-                <div style={{ display: 'flex', gap: '10px', marginTop: '4px' }}>
-                   <span style={{ fontSize: '0.5rem', color: '#00ff9d', fontWeight: 900, border: '1px solid rgba(0,255,157,0.3)', padding: '2px 6px', borderRadius: '4px' }}>{scene?.camera_angle?.toUpperCase() || 'WIDE'}</span>
-                   <span style={{ fontSize: '0.5rem', color: 'rgba(255,255,255,0.4)', fontWeight: 900 }}>VIBE: {scene?.vibe?.toUpperCase() || 'EPIC'}</span>
+                <h4 className="header-title" style={{ margin: 0, fontWeight: 900, color: '#fff', letterSpacing: '2px' }}>NEURAL CINEMA</h4>
+                <div style={{ display: 'flex', gap: '6px', marginTop: '2px' }}>
+                   <span style={{ fontSize: '0.45rem', color: '#00ff9d', fontWeight: 900, border: '1px solid rgba(0,255,157,0.3)', padding: '1px 4px', borderRadius: '3px' }}>{scene?.camera_angle?.toUpperCase() || 'WIDE'}</span>
+                   <span style={{ fontSize: '0.45rem', color: 'rgba(255,255,255,0.4)', fontWeight: 900 }}>{scene?.vibe?.toUpperCase() || 'EPIC'}</span>
                 </div>
              </div>
           </div>
-          <div style={{ display: 'flex', gap: '8px' }}>
+          <div style={{ display: 'flex', gap: '4px' }}>
              {scenes.slice(0, 10).map((_, i) => (
-                <div key={i} style={{ width: i === currentSceneIndex ? '20px' : '6px', height: '6px', borderRadius: '10px', background: i === currentSceneIndex ? '#00ff9d' : 'rgba(255,255,255,0.2)', transition: 'all 0.3s' }} />
+                <div key={i} style={{ width: i === currentSceneIndex ? '12px' : '4px', height: '4px', borderRadius: '10px', background: i === currentSceneIndex ? '#00ff9d' : 'rgba(255,255,255,0.2)', transition: 'all 0.3s' }} />
              ))}
           </div>
         </div>
@@ -289,7 +289,7 @@ export default function SovereignCinematic({ manifestJson }: SovereignCinematicP
                   src={sceneUrls[currentSceneIndex]}
                   animate={{ 
                     scale: scene?.fx === 'zoom_deep' ? [1, 1.4] : [1, 1.15],
-                    x: scene?.camera_angle === 'wide' ? [-20, 20] : [0, 10]
+                    x: scene?.camera_angle === 'wide' ? [-10, 10] : [0, 5]
                   }}
                   transition={{ duration: (scene?.duration || 10) + 1, ease: "easeInOut" }}
                   style={{ width: '100%', height: '100%', objectFit: 'cover' }}
@@ -297,24 +297,21 @@ export default function SovereignCinematic({ manifestJson }: SovereignCinematicP
               </motion.div>
 
               {/* Hollywood Script Subs */}
-              <div style={{ position: 'absolute', bottom: '120px', left: '0', right: '0', textAlign: 'center', zIndex: 60, padding: '0 80px' }}>
+              <div className="cinematic-subs" style={{ position: 'absolute', bottom: '20%', left: '0', right: '0', textAlign: 'center', zIndex: 60 }}>
                 <motion.h2
-                  initial={{ opacity: 0, y: 30 }}
+                  initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   key={`text-${currentSceneIndex}`}
+                  className="subs-text"
                   style={{
                     display: 'inline-block',
                     background: 'rgba(0,0,0,0.85)',
-                    backdropFilter: 'blur(30px) saturate(180%)',
-                    padding: '20px 40px',
-                    borderRadius: '24px',
-                    fontSize: '1.2rem',
+                    backdropFilter: 'blur(20px)',
+                    borderRadius: '16px',
                     color: '#fff',
-                    lineHeight: 1.5,
                     fontWeight: 700,
-                    letterSpacing: '0.5px',
                     border: '1px solid rgba(255,255,255,0.15)',
-                    boxShadow: '0 40px 80px rgba(0,0,0,0.8)'
+                    boxShadow: '0 20px 40px rgba(0,0,0,0.5)'
                   }}
                 >
                   {scene.narration}
@@ -325,28 +322,28 @@ export default function SovereignCinematic({ manifestJson }: SovereignCinematicP
         </div>
 
         {/* STEERING CONTROLS */}
-        <div style={{ padding: '35px 50px', background: 'rgba(5,5,5,0.98)', borderTop: '1px solid rgba(255,255,255,0.1)' }}>
-           <div style={{ width: '100%', height: '6px', background: 'rgba(255,255,255,0.05)', borderRadius: '10px', overflow: 'hidden', marginBottom: '30px' }}>
+        <div className="cinematic-controls" style={{ background: 'rgba(5,5,5,0.98)', borderTop: '1px solid rgba(255,255,255,0.1)' }}>
+           <div style={{ width: '100%', height: '4px', background: 'rgba(255,255,255,0.05)', borderRadius: '10px', overflow: 'hidden', marginBottom: '20px' }}>
               <motion.div animate={{ width: `${progress}%` }} style={{ height: '100%', background: 'linear-gradient(90deg, #00ff9d, #007d4d)' }} />
            </div>
 
            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '30px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
                  <button onClick={togglePlay} disabled={isBuffering} style={{ color: isBuffering ? 'rgba(255,255,255,0.1)' : '#fff', background: 'none', border: 'none', cursor: 'pointer' }}>
-                   {isPlaying ? <Pause size={32} fill="white" /> : <Play size={32} fill="white" />}
+                   {isPlaying ? <Pause size={24} fill="white" /> : <Play size={24} fill="white" />}
                  </button>
-                 <div style={{ display: 'flex', gap: '20px' }}>
-                    <SkipBack onClick={() => handleSceneChange(Math.max(0, currentSceneIndex - 1))} className="btn-ghost" style={{ padding: '6px', opacity: 0.5 }} />
-                    <SkipForward onClick={() => handleSceneChange(Math.min(scenes.length - 1, currentSceneIndex + 1))} className="btn-ghost" style={{ padding: '6px', opacity: 0.5 }} />
+                 <div style={{ display: 'flex', gap: '10px' }}>
+                    <SkipBack onClick={() => handleSceneChange(Math.max(0, currentSceneIndex - 1))} size={18} style={{ opacity: 0.5, cursor: 'pointer' }} />
+                    <SkipForward onClick={() => handleSceneChange(Math.min(scenes.length - 1, currentSceneIndex + 1))} size={18} style={{ opacity: 0.5, cursor: 'pointer' }} />
                  </div>
               </div>
 
-              <div style={{ display: 'flex', alignItems: 'center', gap: '25px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
                  <button onClick={() => setIsMuted(!isMuted)} style={{ color: 'rgba(255,255,255,0.3)', background: 'none', border: 'none', cursor: 'pointer' }}>
-                    {isMuted ? <VolumeX size={24} /> : <Volume2 size={24} />}
+                    {isMuted ? <VolumeX size={18} /> : <Volume2 size={18} />}
                  </button>
-                 <button className="btn-beast" style={{ padding: '12px 25px', fontSize: '0.7rem', fontWeight: 900 }}>
-                    <Download size={16} /> EXPORT CINEMA PACKAGE
+                 <button className="btn-beast export-btn" style={{ fontWeight: 900 }}>
+                    <Download size={14} /> EXPORT
                  </button>
               </div>
            </div>
@@ -354,8 +351,64 @@ export default function SovereignCinematic({ manifestJson }: SovereignCinematicP
       </motion.div>
 
       <style jsx global>{`
+        .cinematic-header {
+          padding: 15px 25px;
+          height: 70px;
+        }
+        .header-title {
+          font-size: 0.75rem;
+        }
+        .cinematic-subs {
+          padding: 0 40px;
+        }
+        .subs-text {
+          padding: 12px 24px;
+          font-size: 1rem;
+          line-height: 1.4;
+        }
+        .cinematic-controls {
+          padding: 20px 30px;
+        }
+        .export-btn {
+          padding: 8px 16px;
+          font-size: 0.6rem;
+        }
+
+        @media (max-width: 768px) {
+          .cinematic-header {
+            padding: 10px 15px;
+            height: 60px;
+          }
+          .header-title {
+            font-size: 0.6rem;
+          }
+          .header-icon {
+            width: 20px; height: 20px;
+          }
+          .cinematic-subs {
+            padding: 0 15px;
+            bottom: 60px !important;
+          }
+          .subs-text {
+            padding: 8px 16px;
+            font-size: 0.75rem;
+            line-height: 1.3;
+            border-radius: 12px;
+          }
+          .cinematic-controls {
+            padding: 15px;
+          }
+          .export-btn {
+            padding: 6px 12px;
+            font-size: 0.5rem;
+          }
+          .cinematic-root {
+            border-radius: 16px !important;
+          }
+        }
+
         .beast-loader-ring {
-          width: 60px; height: 60px;
+          width: 40px; height: 40px;
           border: 3px solid rgba(0,255,157,0.1);
           border-top: 3px solid #00ff9d;
           border-radius: 50%;
