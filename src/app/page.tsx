@@ -19,6 +19,7 @@ import FileUploader, { FileData } from '@/components/FileUploader';
 import Settings from '@/components/Settings';
 import NeuralCanvas from '@/components/NeuralCanvas';
 import SovereignCinematic from '@/components/SovereignCinematic';
+import Sidebar from '@/components/Sidebar';
 
 const CodeBlock = ({ inline, className, children, ...props }: any) => {
   const [copied, setCopied] = useState(false);
@@ -69,8 +70,6 @@ export default function AppMain() {
   const [files, setFiles] = useState<FileData[]>([]);
   const [isMobile, setIsMobile] = useState(false);
   const [hasMounted, setHasMounted] = useState(false);
-  const [renamingId, setRenamingId] = useState<string | null>(null);
-  const [renameValue, setRenameValue] = useState('');
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [responseIntelligence, setResponseIntelligence] = useState<'auto' | 'concise' | 'medium' | 'long'>('auto');
   const [localMessages, setLocalMessages] = useState<any[]>([]);
@@ -246,19 +245,6 @@ Requirements:
     }
   };
 
-
-  const startRename = (id: string, title: string) => {
-    setRenamingId(id);
-    setRenameValue(title);
-  };
-
-  const submitRename = () => {
-    if (renamingId && renameValue.trim()) {
-      renameChat(renamingId, renameValue.trim());
-      setRenamingId(null);
-    }
-  };
-
   return (
     <div className="app-container" suppressHydrationWarning style={{ position: 'relative', overflow: 'hidden', height: '100dvh', display: 'flex', background: '#020202' }}>
       <Settings isOpen={isSettingsOpen} onClose={() => setSettingsOpen(false)} />
@@ -277,91 +263,21 @@ Requirements:
       
       <AnimatePresence>
         {isSidebarOpen && (
-          <motion.aside 
-            initial={isMobile ? { x: '-100%' } : { width: '280px' }}
-            animate={isMobile ? (isSidebarOpen ? { x: 0 } : { x: '-100%' }) : (isSidebarOpen ? { width: '280px' } : { width: '0px' })}
-            transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-            style={{ 
-              background: 'rgba(5,5,5,0.95)', 
-              backdropFilter: 'blur(30px)',
-              borderRight: '1px solid var(--glass-border)',
-              display: 'flex',
-              flexDirection: 'column',
-              overflow: 'hidden',
-              position: isMobile ? 'fixed' : 'relative',
-              top: 0,
-              bottom: 0,
-              left: 0,
-              width: isMobile ? '85%' : '280px',
-              zIndex: 100,
-              boxShadow: isMobile && isSidebarOpen ? '20px 0 50px rgba(0,0,0,0.5)' : 'none',
-              padding: '1.25rem'
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '2.5rem' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.8rem' }}>
-                <div style={{ width: '36px', height: '36px', background: 'var(--beast-gradient)', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 0 15px rgba(0, 255, 157, 0.3)' }}><Zap size={20} fill="black" /></div>
-                <h2 className="text-beast" style={{ fontSize: '1.2rem', letterSpacing: '0.5px' }}>JLR AI</h2>
-              </div>
-              <button onClick={() => setSidebarOpen(false)} className="btn-ghost" style={{ padding: '6px' }}><PanelLeft size={18} /></button>
-            </div>
-            
-            <button onClick={() => { createNewChat(); if(isMobile) setSidebarOpen(false); }} className="btn-beast" style={{ width: '100%', marginBottom: '2rem', justifyContent: 'center', borderRadius: '12px', padding: '12px', fontSize: '0.8rem', letterSpacing: '1px' }}><Plus size={18} /><span>NEW SESSION</span></button>
-            
-            <div style={{ flex: 1, overflowY: 'auto' }}>
-              <p style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.25)', textTransform: 'uppercase', marginBottom: '1.25rem', fontWeight: 900, letterSpacing: '2px' }}>NEURAL ARCHIVE</p>
-              {chats.filter(c => c.messages.length > 0 || c.id === currentChatId).map(chat => (
-                <div key={chat.id} className={`sidebar-item ${currentChatId === chat.id ? 'active' : ''}`} style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.7rem 0.8rem', marginBottom: '6px', borderRadius: '12px', transition: 'all 0.2s', border: currentChatId === chat.id ? '1px solid var(--glass-border)' : '1px solid transparent', background: currentChatId === chat.id ? 'rgba(255,255,255,0.03)' : 'transparent' }}>
-                  <MessageSquare size={16} style={{ opacity: 0.4, flexShrink: 0 }} />
-                  {renamingId === chat.id ? (
-                    <input 
-                      autoFocus 
-                      value={renameValue} 
-                      onChange={(e) => setRenameValue(e.target.value)} 
-                      onBlur={submitRename}
-                      onKeyDown={(e) => e.key === 'Enter' && submitRename()}
-                      style={{ background: 'transparent', border: 'none', color: '#fff', fontSize: '0.85rem', width: '100%', outline: 'none' }}
-                    />
-                  ) : (
-                    <div onClick={() => { setCurrentChatId(chat.id); if(isMobile) setSidebarOpen(false); }} style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: '0.85rem', fontWeight: 500, color: currentChatId === chat.id ? '#fff' : 'rgba(255,255,255,0.6)' }}>{chat.title}</div>
-                  )}
-                  <div className="item-actions" style={{ display: 'flex', gap: '0.5rem' }}>
-                    {!renamingId && (
-                      <button onClick={(e) => { e.stopPropagation(); startRename(chat.id, chat.title); }} className="action-btn hover-glow" title="Rename Session">
-                        <Edit2 size={12} />
-                      </button>
-                    )}
-                    <button onClick={(e) => { e.stopPropagation(); deleteChat(chat.id); }} className="action-btn stylish-delete" title="Purge Session">
-                      <Trash2 size={14} />
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            <div style={{ marginTop: 'auto', paddingTop: '1.5rem' }}>
-              <div className="hologram-card" style={{ padding: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.75rem', borderRadius: '16px', background: 'rgba(255,255,255,0.02)' }}>
-                <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'linear-gradient(45deg, #050505, #222)', border: '1px solid var(--glass-border)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><User size={18} /></div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: '0.9rem', fontWeight: 900, overflow: 'hidden', textOverflow: 'ellipsis' }}>{user ? user.username : 'GUEST NODE'}</div>
-                  <div style={{ fontSize: '0.65rem', color: user?.id !== 'guest' ? 'var(--accent-beast)' : 'rgba(255,255,255,0.3)', fontWeight: 800 }}>{user?.id !== 'guest' ? 'SUPREME ACCESS' : 'RESTRICTED LINK'}</div>
-                </div>
-                {(user?.username === 'ravirajjavvadi' || user?.email === 'ravirajjavvadi@gmail.com') && (
-                  <Link href="/admin" style={{ color: 'rgba(255,255,255,0.4)' }} title="Supreme Command Center">
-                    <ShieldAlert size={16} />
-                  </Link>
-
-                )}
-                {user?.id !== 'guest' ? (
-                  <button onClick={logout} style={{ background: 'transparent', border: 'none', color: 'rgba(255,255,255,0.3)', cursor: 'pointer' }} title="Log Out"><LogOut size={16} /></button>
-                ) : (
-                  <button onClick={() => setShowAuthModal(true)} style={{ background: 'var(--accent-beast)', border: 'none', color: '#000', padding: '4px 10px', borderRadius: '8px', fontSize: '0.6rem', fontWeight: 900, cursor: 'pointer', letterSpacing: '1px' }}>IDENTIFY</button>
-                )}
-              </div>
-
-
-            </div>
-          </motion.aside>
+          <Sidebar 
+            isOpen={isSidebarOpen}
+            isMobile={isMobile}
+            onClose={() => setSidebarOpen(false)}
+            chats={chats}
+            currentChatId={currentChatId}
+            setCurrentChatId={setCurrentChatId}
+            createNewChat={createNewChat}
+            renameChat={renameChat}
+            deleteChat={deleteChat}
+            user={user}
+            logout={logout}
+            setShowAuthModal={setShowAuthModal}
+            onSettingsOpen={() => setSettingsOpen(true)}
+          />
         )}
       </AnimatePresence>
 
