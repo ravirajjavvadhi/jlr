@@ -46,98 +46,115 @@ export default function AuthScreen({ onClose }: { onClose?: () => void }) {
 
 
   return (
-    <div style={{ height: '100dvh', width: '100vw', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem', background: '#020202' }}>
+    <div style={{ height: '100dvh', width: '100vw', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem', background: '#020202', overflow: 'hidden' }}>
+      {/* Cinematic Backdrop Elements */}
+      <div style={{ position: 'absolute', top: '10%', left: '50%', transform: 'translateX(-50%)', width: '300px', height: '300px', background: 'radial-gradient(circle, rgba(255, 215, 0, 0.05) 0%, transparent 70%)', filter: 'blur(50px)', zIndex: 0 }} />
+      
       <motion.div 
-        initial={{ opacity: 0, scale: 0.95 }}
-        animate={{ opacity: 1, scale: 1 }}
-        className="hologram-card"
-        style={{ width: '100%', maxWidth: '420px', padding: '2.5rem', position: 'relative', overflow: 'hidden' }}
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        style={{ width: '100%', maxWidth: '440px', padding: '3rem 2rem', position: 'relative', background: 'rgba(10, 10, 10, 0.7)', backdropFilter: 'blur(30px)', borderRadius: '24px', border: '1px solid rgba(255, 255, 255, 0.05)', boxShadow: '0 20px 50px rgba(0,0,0,0.5)', zIndex: 1 }}
       >
-        <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '2px', background: 'var(--accent-gradient)', opacity: 0.5 }} />
-        
+        {/* PEAK BRANDING */}
+        <div style={{ textAlign: 'center', marginBottom: '3rem' }}>
+          <motion.div
+            initial={{ scale: 0.8, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ delay: 0.2 }}
+          >
+             <h1 className="text-gold" style={{ 
+               fontFamily: "'Syncopate', sans-serif", 
+               fontSize: '2.5rem', 
+               fontWeight: 700, 
+               letterSpacing: '12px', 
+               margin: 0,
+               textTransform: 'uppercase',
+               paddingLeft: '12px' // Offset for tracking
+             }}>
+               JLR AI
+             </h1>
+             <motion.div 
+               initial={{ width: 0 }}
+               animate={{ width: '60px' }}
+               style={{ height: '2px', background: 'var(--gold-glow)', margin: '15px auto', opacity: 0.6 }}
+             />
+             <p style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.4)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '4px' }}>Supreme Intelligence Node</p>
+          </motion.div>
+        </div>
+
         {onClose && (
           <button 
             onClick={onClose}
-            style={{ position: 'absolute', top: '1.25rem', right: '1.25rem', background: 'transparent', border: 'none', color: 'rgba(255,255,255,0.3)', cursor: 'pointer', zIndex: 10 }}
+            style={{ position: 'absolute', top: '1.5rem', right: '1.5rem', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '50%', color: 'rgba(255,255,255,0.3)', cursor: 'pointer', zIndex: 10, width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
           >
-            <X size={20} />
+            <X size={16} />
           </button>
         )}
-
-        <div style={{ textAlign: 'center', marginBottom: '2.5rem' }}>
-          <motion.div 
-            animate={{ rotate: 360 }}
-            transition={{ duration: 25, repeat: Infinity, ease: 'linear' }}
-            style={{ width: '56px', height: '56px', background: 'var(--accent-gradient)', borderRadius: '14px', margin: '0 auto 1.25rem auto', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 0 30px rgba(0, 242, 254, 0.3)' }}
-          >
-            <Zap size={28} fill="black" stroke="black" />
-          </motion.div>
-          <h1 className="text-beast" style={{ fontSize: '1.75rem', marginBottom: '0.25rem', letterSpacing: '4px' }}>JLR AI</h1>
-          <p style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.4)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '3px' }}>Supreme Intelligence Node</p>
-        </div>
 
         {error && (
-          <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} style={{ padding: '0.75rem', background: 'rgba(255,107,107,0.1)', border: '1px solid rgba(255,107,107,0.3)', borderRadius: '8px', color: '#ff6b6b', fontSize: '0.7rem', fontWeight: 700, marginBottom: '1.5rem', textAlign: 'center' }}>
-            {error.toUpperCase()}
+          <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} style={{ padding: '0.85rem', background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.2)', borderRadius: '12px', color: '#f87171', fontSize: '0.7rem', fontWeight: 800, marginBottom: '2rem', textAlign: 'center', textTransform: 'uppercase', letterSpacing: '1px' }}>
+            {error}
           </motion.div>
         )}
 
-        <button 
-          onClick={handleGoogleLogin}
-          type="button"
-          className="btn-beast" 
-          disabled={loading} 
-          style={{ width: '100%', padding: '0.9rem', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.75rem', letterSpacing: '2px', fontSize: '0.75rem', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)' }}
-        >
-          <img src="https://www.google.com/favicon.ico" alt="Google" style={{ width: '16px', height: '16px' }} />
-          {loading ? 'SYNCING...' : 'ACTIVATE WITH GOOGLE'}
-        </button>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+          <motion.button 
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            onClick={handleGoogleLogin}
+            disabled={loading} 
+            style={{ width: '100%', padding: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '1rem', letterSpacing: '2px', fontSize: '0.75rem', fontWeight: 800, background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '16px', color: '#fff', cursor: 'pointer' }}
+          >
+            <img src="https://www.google.com/favicon.ico" alt="Google" style={{ width: '18px', height: '18px' }} />
+            {loading ? 'SYNCHRONIZING...' : 'ACTIVATE VIA GOOGLE'}
+          </motion.button>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1.5rem', opacity: 0.2 }}>
-          <div style={{ flex: 1, height: '1px', background: '#fff' }} />
-          <span style={{ fontSize: '0.6rem', fontWeight: 900 }}>OR</span>
-          <div style={{ flex: 1, height: '1px', background: '#fff' }} />
-        </div>
-
-        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-          <div style={{ position: 'relative' }}>
-            <User size={16} style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', opacity: 0.3 }} />
-            <input 
-              type="text"
-              required
-              placeholder="IDENTITY NAME (USERNAME)"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="liquid-input"
-              style={{ width: '100%', paddingLeft: '3rem', fontSize: '0.75rem', fontWeight: 700 }}
-            />
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', opacity: 0.1 }}>
+            <div style={{ flex: 1, height: '1px', background: '#fff' }} />
+            <span style={{ fontSize: '0.6rem', fontWeight: 900 }}>IDENTITY BRIDGE</span>
+            <div style={{ flex: 1, height: '1px', background: '#fff' }} />
           </div>
 
-          <div style={{ position: 'relative' }}>
-            <Lock size={16} style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', opacity: 0.3 }} />
-            <input 
-              type="password"
-              required
-              placeholder="SUPREMACY KEY (PASSWORD)"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="liquid-input"
-              style={{ width: '100%', paddingLeft: '3rem', fontSize: '0.75rem', fontWeight: 700 }}
-            />
-          </div>
+          <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+            <div style={{ position: 'relative' }}>
+              <User size={18} style={{ position: 'absolute', left: '1.25rem', top: '50%', transform: 'translateY(-50%)', color: '#B8860B', opacity: 0.6 }} />
+              <input 
+                type="text"
+                required
+                placeholder="IDENTITY NODE ID"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                style={{ width: '100%', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '16px', padding: '1.1rem 1.1rem 1.1rem 3.5rem', color: '#fff', fontSize: '0.85rem', fontWeight: 600, outline: 'none' }}
+              />
+            </div>
 
+            <div style={{ position: 'relative' }}>
+              <Lock size={18} style={{ position: 'absolute', left: '1.25rem', top: '50%', transform: 'translateY(-50%)', color: '#B8860B', opacity: 0.6 }} />
+              <input 
+                type="password"
+                required
+                placeholder="SUPREMACY ACCESS KEY"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                style={{ width: '100%', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '16px', padding: '1.1rem 1.1rem 1.1rem 3.5rem', color: '#fff', fontSize: '0.85rem', fontWeight: 600, outline: 'none' }}
+              />
+            </div>
 
-          <button className="btn-beast" type="submit" disabled={loading} style={{ width: '100%', padding: '0.9rem', marginTop: '0.5rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.75rem', letterSpacing: '2px', fontSize: '0.75rem' }}>
-            {loading ? 'INITIATING...' : (isLogin ? 'ACTIVATE NODE' : 'ESTABLISH ARCHIVE')}
-            {!loading && <ArrowRight size={16} />}
-          </button>
+            <motion.button 
+              whileHover={{ scale: 1.02, boxShadow: '0 0 30px rgba(184, 134, 11, 0.2)' }}
+              whileTap={{ scale: 0.98 }}
+              type="submit" 
+              disabled={loading} 
+              style={{ width: '100%', padding: '1.1rem', marginTop: '0.5rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '1rem', letterSpacing: '4px', fontSize: '0.8rem', fontWeight: 900, background: 'var(--gold-glow)', border: 'none', borderRadius: '16px', color: '#000', cursor: 'pointer', textTransform: 'uppercase' }}
+            >
+              {loading ? 'INITIATING...' : (isLogin ? 'ACTIVATE NODE' : 'ESTABLISH LINK')}
+              {!loading && <ArrowRight size={18} />}
+            </motion.button>
+          </form>
 
-        </form>
-
-        <div style={{ textAlign: 'center', marginTop: '2rem' }}>
           <button 
             onClick={() => setIsLogin(!isLogin)}
-            style={{ background: 'transparent', border: 'none', color: 'rgba(255,255,255,0.3)', fontSize: '0.65rem', fontWeight: 800, cursor: 'pointer', letterSpacing: '1px' }}
+            style={{ background: 'transparent', border: 'none', color: 'rgba(255,255,255,0.3)', fontSize: '0.65rem', fontWeight: 800, cursor: 'pointer', letterSpacing: '2px', textTransform: 'uppercase', marginTop: '1rem' }}
           >
             {isLogin ? "LACKING IDENTITY? ESTABLISH NODE" : "ID ALREADY ACTIVE? INITIATE LINK"}
           </button>

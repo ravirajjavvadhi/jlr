@@ -1,6 +1,10 @@
 @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
 
+@import url('https://fonts.googleapis.com/css2?family=Syncopate:wght@400;700&display=swap');
+
 :root {
+  --gold-glow: linear-gradient(135deg, #FFD700 0%, #FFA500 50%, #B8860B 100%);
+  --beast-obsidian: #050505;
   --background: #020202;
   --foreground: #ffffff;
   --sidebar-background: rgba(5, 5, 5, 0.8);
@@ -15,6 +19,14 @@
   --shimmer: linear-gradient(90deg, transparent, rgba(255,255,255,0.05), transparent);
   --font-beast: 'Outfit', sans-serif;
   --font-mono: 'JetBrains Mono', monospace;
+}
+
+.text-gold {
+  background: var(--gold-glow);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 0 10px rgba(255, 215, 0, 0.3));
 }
 
 * {
