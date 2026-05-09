@@ -163,7 +163,7 @@ export default function SovereignCinematic({ manifestJson }: SovereignCinematicP
 
         {/* Header Bar */}
         <div style={{ 
-          position: 'absolute', top: 0, insetX: 0, height: '80px', 
+          position: 'absolute', top: 0, left: 0, right: 0, height: '80px', 
           background: 'linear-gradient(to bottom, rgba(0,0,0,0.9), transparent)', zIndex: 30,
           display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 30px'
         }}>
@@ -200,7 +200,7 @@ export default function SovereignCinematic({ manifestJson }: SovereignCinematicP
               />
 
               {/* Subtitles (Hollywood Style) */}
-              <div style={{ position: 'absolute', bottom: '100px', insetX: '0', textAlign: 'center', zIndex: 40, padding: '0 60px' }}>
+              <div style={{ position: 'absolute', bottom: '100px', left: '0', right: '0', textAlign: 'center', zIndex: 40, padding: '0 60px' }}>
                 <motion.span
                   initial={{ opacity: 0, y: 15 }}
                   animate={{ opacity: 1, y: 0 }}
