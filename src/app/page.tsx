@@ -213,20 +213,34 @@ Requirements:
       onDone: (full: string) => {
         setIsLoading(false);
         setIsGeneratingImage(false);
-        const finalMessages = [...updatedMessagesWithAI, { role: 'assistant', content: full }];
-        updateChatMessages(chatId, finalMessages);
         
-        // [SOVEREIGN PARSER]: Detect and extract Project Manifest
+        // [SOVEREIGN SILENT EXTRACTION]: Extract and strip manifest from chat history
+        let cleanContent = full;
         const manifestMatch = full.match(/<<<PROJECT_MANIFEST_START>>>([\s\S]*?)<<<PROJECT_MANIFEST_END>>>/);
+        
         if (manifestMatch) {
           try {
             const manifest = JSON.parse(manifestMatch[1]);
             setArtifactManifest(manifest);
             setIsArtifactOpen(true);
+            // Strip the manifest block from the message content shown in chat
+            cleanContent = full.replace(/<<<PROJECT_MANIFEST_START>>>[\s\S]*?<<<PROJECT_MANIFEST_END>>>/, '').trim();
           } catch (e) {
             console.error("Manifest Parsing Failed", e);
           }
         }
+
+        const finalMessages = [...updatedMessagesWithAI, { role: 'assistant', content: cleanContent }];
+        updateChatMessages(chatId, finalMessages);
+        
+        // Update local state to show clean content
+        setLocalMessages(prev => {
+          const updated = [...prev];
+          if (updated[updated.length - 1]?.role === 'assistant') {
+            updated[updated.length - 1] = { ...updated[updated.length - 1], content: cleanContent };
+          }
+          return updated;
+        });
 
         const isDefaultTitle = !currentChat?.title || currentChat.title === 'New Power Session';
         if (updatedMessagesWithAI.length === 1 && isDefaultTitle) {

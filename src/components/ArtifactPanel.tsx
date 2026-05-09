@@ -38,13 +38,18 @@ const ArtifactPanel: React.FC<ArtifactPanelProps> = ({ isOpen, onClose, manifest
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
-    if (manifest && manifest.files.length > 0) {
+    if (manifest && Array.isArray(manifest.files) && manifest.files.length > 0) {
       const entry = manifest.files.find(f => f.path === manifest.entryFile) || manifest.files[0];
       setSelectedFile(entry);
+    } else {
+      setSelectedFile(null);
     }
   }, [manifest]);
 
-  if (!manifest && isOpen) return null;
+  if (!isOpen) return null;
+
+  // Render error state if manifest is malformed
+  const isManifestIncomplete = manifest && (!Array.isArray(manifest.files) || manifest.files.length === 0);
 
   const downloadZip = async () => {
     if (!manifest) return;
@@ -195,7 +200,7 @@ const ArtifactPanel: React.FC<ArtifactPanelProps> = ({ isOpen, onClose, manifest
               <div style={{ width: '260px', borderRight: '1px solid rgba(255,255,255,0.05)', display: 'flex', flexDirection: 'column', background: 'rgba(255,255,255,0.01)' }}>
                 <div style={{ padding: '1rem', fontSize: '0.65rem', fontWeight: 900, opacity: 0.3, letterSpacing: '1.5px', textTransform: 'uppercase' }}>File System</div>
                 <div style={{ flex: 1, overflowY: 'auto', padding: '0 0.5rem' }}>
-                  {manifest?.files.map(file => (
+                  {manifest?.files?.map(file => (
                     <div 
                       key={file.path} 
                       onClick={() => setSelectedFile(file)}
@@ -217,12 +222,29 @@ const ArtifactPanel: React.FC<ArtifactPanelProps> = ({ isOpen, onClose, manifest
                       <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{file.name}</span>
                     </div>
                   ))}
+                  {isManifestIncomplete && (
+                    <div style={{ padding: '2rem 1rem', textAlign: 'center', opacity: 0.3, fontSize: '0.7rem' }}>
+                      <Cpu size={24} style={{ margin: '0 auto 1rem' }} />
+                      NO CODE MODULES DETECTED
+                    </div>
+                  )}
                 </div>
               </div>
             )}
 
             <div style={{ flex: 1, overflow: 'hidden', position: 'relative', background: view === 'preview' ? '#fff' : '#0a0a0a' }}>
-              {view === 'preview' ? (
+              {isManifestIncomplete ? (
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', padding: '3rem', textAlign: 'center', background: '#050505', color: '#fff' }}>
+                  <motion.div initial={{ scale: 0.9 }} animate={{ scale: 1 }} transition={{ repeat: Infinity, duration: 2, repeatType: 'reverse' }}>
+                     <Cpu size={48} style={{ color: 'var(--accent-beast)', marginBottom: '2rem', opacity: 0.5 }} />
+                  </motion.div>
+                  <h2 className="text-beast" style={{ fontSize: '1.2rem', marginBottom: '1rem' }}>Sovereign Synthesis Pending</h2>
+                  <p style={{ opacity: 0.5, maxWidth: '450px', fontSize: '0.9rem', lineHeight: 1.6 }}>The JLR AI Core has generated a high-level strategic overview. Please confirm the stack choice in the chat to initiate full multi-file code synthesis.</p>
+                  <div style={{ marginTop: '2rem', display: 'flex', gap: '1rem' }}>
+                    <div style={{ padding: '8px 16px', background: 'rgba(255,255,255,0.03)', borderRadius: '8px', fontSize: '0.7rem', fontWeight: 900, border: '1px solid rgba(255,255,255,0.05)' }}>AWAITING COMMANDER APPROVAL</div>
+                  </div>
+                </div>
+              ) : view === 'preview' ? (
                 <iframe 
                   title="Project Preview"
                   srcDoc={generatePreviewContent()}
@@ -230,18 +252,26 @@ const ArtifactPanel: React.FC<ArtifactPanelProps> = ({ isOpen, onClose, manifest
                 />
               ) : (
                 <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-                  <div style={{ padding: '0.75rem 1.5rem', background: 'rgba(255,255,255,0.02)', borderBottom: '1px solid rgba(255,255,255,0.05)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <div style={{ fontSize: '0.75rem', opacity: 0.6, display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-                      <Terminal size={14} />
-                      <span>{selectedFile?.path}</span>
+                  {selectedFile ? (
+                    <>
+                      <div style={{ padding: '0.75rem 1.5rem', background: 'rgba(255,255,255,0.02)', borderBottom: '1px solid rgba(255,255,255,0.05)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div style={{ fontSize: '0.75rem', opacity: 0.6, display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                          <Terminal size={14} />
+                          <span>{selectedFile?.path}</span>
+                        </div>
+                        <button onClick={copyCode} style={{ background: 'transparent', border: 'none', color: copied ? '#00f2fe' : 'rgba(255,255,255,0.4)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.7rem', fontWeight: 800 }}>
+                          {copied ? <><Check size={14} /> COPIED</> : <><Copy size={14} /> COPY</>}
+                        </button>
+                      </div>
+                      <pre style={{ flex: 1, margin: 0, padding: '1.5rem', overflow: 'auto', fontSize: '0.9rem', lineHeight: 1.6, color: '#d1d5db', fontFamily: 'monospace' }}>
+                        <code>{selectedFile?.content}</code>
+                      </pre>
+                    </>
+                  ) : (
+                    <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 0.2 }}>
+                      <Code size={48} />
                     </div>
-                    <button onClick={copyCode} style={{ background: 'transparent', border: 'none', color: copied ? '#00f2fe' : 'rgba(255,255,255,0.4)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.7rem', fontWeight: 800 }}>
-                      {copied ? <><Check size={14} /> COPIED</> : <><Copy size={14} /> COPY</>}
-                    </button>
-                  </div>
-                  <pre style={{ flex: 1, margin: 0, padding: '1.5rem', overflow: 'auto', fontSize: '0.9rem', lineHeight: 1.6, color: '#d1d5db', fontFamily: 'monospace' }}>
-                    <code>{selectedFile?.content}</code>
-                  </pre>
+                  )}
                 </div>
               )}
             </div>
