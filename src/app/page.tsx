@@ -8,7 +8,7 @@ import {
   PanelLeft, Send, Plus, MessageSquare, Copy, Check, StopCircle, 
   User, Sparkles, Search, Settings as SettingsIcon, MoreVertical, Zap, 
   Terminal, ChevronDown, LogOut, Trash2, Edit2, AlertCircle, ArrowRight, ShieldAlert,
-  Loader2, Film, Globe
+  Loader2, Film, Globe, ShieldCheck, EyeOff
 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -63,6 +63,7 @@ export default function AppMain() {
   const { user, loading: authLoading, chats, currentChatId, setCurrentChatId, createNewChat, updateChatMessages, renameChat, deleteChat, logout } = useAuth();
   const [artifactManifest, setArtifactManifest] = useState<any>(null);
   const [isSearchMode, setIsSearchMode] = useState(false);
+  const [isPrivacyMode, setIsPrivacyMode] = useState(false); // [SOVEREIGN PRIVACY]: Incognito Mode
   const [input, setInput] = useState('');
   const [isSidebarOpen, setSidebarOpen] = useState(true);
   const [isSettingsOpen, setSettingsOpen] = useState(false);
@@ -194,6 +195,7 @@ Requirements:
       userId: user?.id,
       responseLength: responseIntelligence,
       isSearchMode: isSearchMode,
+      isPrivacyMode: isPrivacyMode, // [INCOGNITO]: Bypass persistence
       // [CRITICAL FIX]: Only include TEXT-based documents in fileContext, NEVER base64 images/PDFs
       fileContext: originalFiles.filter(f => f.type === 'document').length > 0
         ? originalFiles.filter(f => f.type === 'document').map(f => `File: ${f.name}\nContent: ${f.data}`).join('\n\n')
@@ -215,13 +217,18 @@ Requirements:
         setIsGeneratingImage(false);
         const aiMessage = { id: Date.now().toString(), role: 'assistant', content: full };
         const finalMessages = [...updatedMessagesWithAI, aiMessage];
-        updateChatMessages(chatId, finalMessages);
-        setLocalMessages(finalMessages); // Explicitly sync local state
         
-        const isDefaultTitle = !currentChat?.title || currentChat.title === 'New Power Session';
-        if (updatedMessagesWithAI.length === 1 && isDefaultTitle) {
-          autoGenerateTitle(chatId, originalInput, full);
+        // [SOVEREIGN PRIVACY]: If Incognito is active, skip cloud persistence entirely
+        if (!isPrivacyMode) {
+          updateChatMessages(chatId, finalMessages);
+          
+          const isDefaultTitle = !currentChat?.title || currentChat.title === 'New Power Session';
+          if (updatedMessagesWithAI.length === 1 && isDefaultTitle) {
+            autoGenerateTitle(chatId, originalInput, full);
+          }
         }
+        
+        setLocalMessages(finalMessages); // Explicitly sync local state for immediate feedback
       },
       onError: (err: any) => {
         setIsLoading(false);
@@ -440,40 +447,64 @@ Requirements:
             borderRadius: isMobile ? '24px' : '32px',
             boxShadow: '0 20px 50px rgba(0,0,0,0.5)'
           }}>
-            {/* SUPREME INTELLIGENCE TOGGLE */}
-            <div style={{ display: 'flex', justifyContent: 'center', margin: '-24px auto 12px auto', zIndex: 10 }}>
+            {/* CONTROL CENTER TOGGLES */}
+            <div style={{ display: 'flex', justifyContent: 'center', gap: '8px', margin: '-24px auto 12px auto', zIndex: 10 }}>
+              {/* SUPREME INTELLIGENCE TOGGLE */}
               <button 
                 onClick={() => setIsSearchMode(!isSearchMode)}
                 style={{
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '0.5rem',
-                  padding: '6px 14px',
-                  borderRadius: '20px',
-                  background: isSearchMode ? 'rgba(16, 185, 129, 0.15)' : 'rgba(0,0,0,0.4)',
-                  border: isSearchMode ? '1px solid rgba(16, 185, 129, 0.4)' : '1px solid rgba(255,255,255,0.1)',
+                  gap: '0.4rem',
+                  padding: '5px 12px',
+                  borderRadius: '16px',
+                  background: isSearchMode ? 'rgba(16, 185, 129, 0.12)' : 'rgba(0,0,0,0.6)',
+                  border: isSearchMode ? '1px solid rgba(16, 185, 129, 0.3)' : '1px solid rgba(255,255,255,0.08)',
                   cursor: 'pointer',
-                  transition: 'all 0.3s ease',
-                  backdropFilter: 'blur(10px)',
-                  boxShadow: isSearchMode ? '0 0 15px rgba(16,185,129,0.2)' : 'none'
+                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                  backdropFilter: 'blur(12px)',
+                  boxShadow: isSearchMode ? '0 0 12px rgba(16,185,129,0.15)' : '0 4px 12px rgba(0,0,0,0.2)'
                 }}
               >
-                <div style={{ 
-                  width: '6px', 
-                  height: '6px', 
-                  borderRadius: '50%', 
-                  background: isSearchMode ? '#10b981' : 'rgba(255,255,255,0.3)',
-                  boxShadow: isSearchMode ? '0 0 8px #10b981' : 'none'
-                }} />
+                <Globe size={11} style={{ color: isSearchMode ? '#10b981' : 'rgba(255,255,255,0.3)' }} />
                 <span style={{ 
-                  fontSize: '0.65rem', 
-                  fontWeight: 800, 
-                  letterSpacing: '1px',
-                  color: isSearchMode ? '#10b981' : 'rgba(255,255,255,0.5)'
+                  fontSize: '0.6rem', 
+                  fontWeight: 900, 
+                  letterSpacing: '0.5px',
+                  color: isSearchMode ? '#10b981' : 'rgba(255,255,255,0.4)',
+                  whiteSpace: 'nowrap'
                 }}>
-                  {isSearchMode ? 'GLOBAL INTELLIGENCE: ONLINE' : 'LIGHTNING MODE: FAST'}
+                  {isSearchMode ? 'INTEL: ON' : 'LIGHTNING: FAST'}
                 </span>
-                <Globe size={12} style={{ color: isSearchMode ? '#10b981' : 'rgba(255,255,255,0.3)' }} />
+              </button>
+
+              {/* SOVEREIGN PRIVACY TOGGLE (INCOGNITO) */}
+              <button 
+                onClick={() => setIsPrivacyMode(!isPrivacyMode)}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.4rem',
+                  padding: '5px 12px',
+                  borderRadius: '16px',
+                  background: isPrivacyMode ? 'rgba(59, 130, 246, 0.12)' : 'rgba(0,0,0,0.6)',
+                  border: isPrivacyMode ? '1px solid rgba(59, 130, 246, 0.3)' : '1px solid rgba(255,255,255,0.08)',
+                  cursor: 'pointer',
+                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                  backdropFilter: 'blur(12px)',
+                  boxShadow: isPrivacyMode ? '0 0 12px rgba(59,130,246,0.15)' : '0 4px 12px rgba(0,0,0,0.2)'
+                }}
+              >
+                {isPrivacyMode ? <ShieldCheck size={11} color="#3b82f6" /> : <EyeOff size={11} color="rgba(255,255,255,0.3)" />}
+                <span style={{ 
+                  fontSize: '0.6rem', 
+                  fontWeight: 900, 
+                  letterSpacing: '0.5px',
+                  color: isPrivacyMode ? '#3b82f6' : 'rgba(255,255,255,0.4)',
+                  whiteSpace: 'nowrap'
+                }}>
+                   {isPrivacyMode ? 'SOVEREIGN PRIVACY: ACTIVE' : 'INCOGNITO'}
+                </span>
               </button>
             </div>
 

@@ -146,7 +146,7 @@ async function getGlobalIntelligence(query: string) {
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { messages, model, provider, fileContext, userId, isSearchMode } = body;
+    const { messages, model, provider, fileContext, userId, isSearchMode, isPrivacyMode } = body;
 
     const systemInstruction = `
 [JLR AI SUPREMACY PROTOCOL]

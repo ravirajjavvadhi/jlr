@@ -52,6 +52,7 @@ export interface MessageOptions {
   userId?: string;
   responseLength?: 'auto' | 'concise' | 'medium' | 'long';
   isSearchMode?: boolean;
+  isPrivacyMode?: boolean;
   signal?: AbortSignal;
 }
 
@@ -123,7 +124,8 @@ export async function sendMessage(messages: any[], modelId: string, options: Mes
       provider: finalProvider,
       fileContext: fileContext,
       userId: userId,
-      isSearchMode: options.isSearchMode
+      isSearchMode: options.isSearchMode,
+      isPrivacyMode: options.isPrivacyMode // [SOVEREIGN PRIVACY]: Pass through to neural bridge
     };
 
     const response = await fetch('/api/chat', {

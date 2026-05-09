@@ -23,6 +23,12 @@ const ChatSchema: Schema = new Schema({
   title: { type: String, default: 'New Power Session' },
   messages: { type: Array, default: [] },
   aiModel: { type: String, default: 'Gemini 2.0 Pro' },
+  // [SOVEREIGN PURGE]: Chats are automatically purged from the cloud after 5 days
+  expiresAt: { 
+    type: Date, 
+    default: () => new Date(Date.now() + 5 * 24 * 60 * 60 * 1000), 
+    index: { expires: '0s' } 
+  }
 }, { timestamps: true });
 
 // Ensure we don't re-compile the model on hot reloads
