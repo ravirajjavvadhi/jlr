@@ -8,7 +8,7 @@ import {
   PanelLeft, Send, Plus, MessageSquare, Copy, Check, StopCircle, 
   User, Sparkles, Search, Settings as SettingsIcon, MoreVertical, Zap, 
   Terminal, ChevronDown, LogOut, Trash2, Edit2, AlertCircle, ArrowRight, ShieldAlert,
-  Loader2
+  Loader2, Film
 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -18,6 +18,7 @@ import AuthScreen from '@/components/AuthScreen';
 import FileUploader, { FileData } from '@/components/FileUploader';
 import Settings from '@/components/Settings';
 import NeuralCanvas from '@/components/NeuralCanvas';
+import SovereignCinematic from '@/components/SovereignCinematic';
 
 const CodeBlock = ({ inline, className, children, ...props }: any) => {
   const [copied, setCopied] = useState(false);
@@ -177,9 +178,9 @@ Requirements:
     setFiles([]);
     setIsLoading(true);
     
-    // [NEURAL INTENT]: Detect if user wants an image to trigger beast loading
-    const isImageIntent = /draw|create|generate|render.*?image|picture|photo|art/i.test(originalInput);
-    if (isImageIntent) setIsGeneratingImage(true);
+    // [NEURAL INTENT]: Detect if user wants an image or video to trigger beast loading
+    const isArtIntent = /draw|create|generate|render.*?image|picture|photo|art|video|movie|film/i.test(originalInput);
+    if (isArtIntent) setIsGeneratingImage(true);
 
     abortControllerRef.current = new AbortController();
 
@@ -421,10 +422,17 @@ Requirements:
                                 p: ({ children }) => <div style={{ marginBottom: '1.25rem' }}>{children}</div> 
                               }}
                             >
-                              {msg.content.replace(/\[ART_PROMPT:\s*(.*?)\]/g, '')}
+                              {msg.content
+                                .replace(/\[ART_PROMPT:\s*(.*?)\]/g, '')
+                                .replace(/\[CINEMATIC_MANIFEST:\s*([\s\S]*?)\]/g, '')}
                             </ReactMarkdown>
+
                             {msg.content.match(/\[ART_PROMPT:\s*(.*?)\]/) && (
                               <NeuralCanvas prompt={msg.content.match(/\[ART_PROMPT:\s*(.*?)\]/)?.[1] || ''} />
+                            )}
+
+                            {msg.content.match(/\[CINEMATIC_MANIFEST:\s*([\s\S]*?)\]/) && (
+                              <SovereignCinematic manifestJson={msg.content.match(/\[CINEMATIC_MANIFEST:\s*([\s\S]*?)\]/)?.[1] || '[]'} />
                             )}
                           </>
                         ) : (
