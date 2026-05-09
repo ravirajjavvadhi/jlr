@@ -40,7 +40,7 @@ export function getStoredApiKey(provider: 'groq' | 'openrouter' = 'groq'): strin
 
 function getSystemPrompt(): string {
   if (typeof window === 'undefined') return SYSTEM_PROMPT_BASE;
-  const name = localStorage.getItem('user_name') || 'Raviraj';
+  const name = localStorage.getItem('user_name') || 'ravirajjavvadi';
   return SYSTEM_PROMPT_BASE.replace('{USER_NAME}', name);
 }
 

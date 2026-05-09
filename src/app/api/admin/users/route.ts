@@ -9,7 +9,7 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
     const commander = searchParams.get('commander');
     
-    if (commander !== 'raviraj') {
+    if (commander !== 'ravirajjavvadi' && commander !== 'ravirajjavvadi@gmail.com') {
       return NextResponse.json({ error: 'Access Denied: Supreme Authority required.' }, { status: 403 });
     }
 

@@ -14,7 +14,7 @@ export default function Settings({ isOpen, onClose }: SettingsProps) {
   const [isSaved, setIsSaved] = useState(false);
 
   useEffect(() => {
-    setUserName(localStorage.getItem('user_name') || 'Raviraj');
+    setUserName(localStorage.getItem('user_name') || 'ravirajjavvadi');
   }, [isOpen]);
 
   const saveSettings = () => {

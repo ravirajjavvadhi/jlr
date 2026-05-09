@@ -147,6 +147,19 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    // [SOVEREIGN KEY VAULT]: Resolve Master Keys from DB (Sovereign override)
+    try {
+      const SystemConfig = (await import('@/models/SystemConfig')).default;
+      const configs = await SystemConfig.find({});
+      const masterGroq = configs.find(c => c.key === 'master_groq_keys')?.value;
+      const masterGemini = configs.find(c => c.key === 'master_gemini_keys')?.value;
+
+      if (masterGroq) groqKeysRaw = groqKeysRaw ? `${masterGroq},${groqKeysRaw}` : masterGroq;
+      if (masterGemini) geminiKeysRaw = geminiKeysRaw ? `${masterGemini},${geminiKeysRaw}` : masterGemini;
+    } catch (e) {
+      console.warn("[JLR-AI]: Sovereign Key Vault resolution failed.", e);
+    }
+
     const groqKeys = groqKeysRaw.split(',').map(k => k.trim()).filter(k => k);
     const orKeys = orKeysRaw.split(',').map(k => k.trim()).filter(k => k);
     const geminiKeys = geminiKeysRaw.split(',').map(k => k.trim()).filter(k => k);

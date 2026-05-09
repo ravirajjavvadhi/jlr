@@ -13,23 +13,44 @@ export default function AdminDashboard() {
   const [filter, setFilter] = useState<'all' | 'with-key' | 'no-key'>('all');
   const [loading, setLoading] = useState(true);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
+  const [isMobile, setIsMobile] = useState(false);
+  const [masterKeys, setMasterKeys] = useState({ groq: '', gemini: '' });
   const [status, setStatus] = useState({ type: '', msg: '' });
 
   // [SECURITY BLOCK]: Absolute Authority Check
   useEffect(() => {
-    const isAdmin = user && (user.username === 'raviraj' || user.email === 'ravirajjavvadi@gmail.com');
+    const isAdmin = user && (user.username === 'ravirajjavvadi' || user.email === 'ravirajjavvadi@gmail.com');
     if (!isAdmin) {
       const timer = setTimeout(() => {
-        if (!user || (user.username !== 'raviraj' && user.email !== 'ravirajjavvadi@gmail.com')) router.push('/');
+        if (!user || (user.username !== 'ravirajjavvadi' && user.email !== 'ravirajjavvadi@gmail.com')) router.push('/');
       }, 1500);
       return () => clearTimeout(timer);
     }
     fetchUsers();
+    fetchMasterKeys();
+    
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
   }, [user]);
+
+  const fetchMasterKeys = async () => {
+    try {
+      const commander = user?.username === 'ravirajjavvadi' ? 'ravirajjavvadi' : (user?.email || 'ravirajjavvadi');
+      const res = await fetch(`/api/admin/config?commander=${encodeURIComponent(commander)}`);
+      const data = await res.json();
+      if (data.configs) {
+        const groq = data.configs.find((c: any) => c.key === 'master_groq_keys')?.value || '';
+        const gemini = data.configs.find((c: any) => c.key === 'master_gemini_keys')?.value || '';
+        setMasterKeys({ groq, gemini });
+      }
+    } catch {}
+  };
 
   const fetchUsers = async () => {
     try {
-      const commander = user?.username === 'raviraj' ? 'raviraj' : (user?.email || 'raviraj');
+      const commander = user?.username === 'ravirajjavvadi' ? 'ravirajjavvadi' : (user?.email || 'ravirajjavvadi');
       const res = await fetch(`/api/admin/users?commander=${encodeURIComponent(commander)}`);
       const data = await res.json();
       if (data.users) {
@@ -44,11 +65,34 @@ export default function AdminDashboard() {
     }
   };
 
+  const handleUpdateMasterKeys = async () => {
+    setUpdatingId('master');
+    try {
+      const commander = user?.username === 'ravirajjavvadi' ? 'ravirajjavvadi' : (user?.email || 'ravirajjavvadi');
+      await fetch('/api/admin/config', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ commander, key: 'master_groq_keys', value: masterKeys.groq })
+      });
+      await fetch('/api/admin/config', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ commander, key: 'master_gemini_keys', value: masterKeys.gemini })
+      });
+      setStatus({ type: 'success', msg: 'Sovereign Master Keys Locked.' });
+      setTimeout(() => setStatus({ type: '', msg: '' }), 3000);
+    } catch {
+      setStatus({ type: 'error', msg: 'Failed to update Sovereign Vault.' });
+    } finally {
+      setUpdatingId(null);
+    }
+  };
+
   const handleUpdateKeys = async (userId: string, keys: string, geminiKeys: string) => {
     setUpdatingId(userId);
     setStatus({ type: '', msg: '' });
     try {
-      const commander = user?.username === 'raviraj' ? 'raviraj' : (user?.email || 'raviraj');
+      const commander = user?.username === 'ravirajjavvadi' ? 'ravirajjavvadi' : (user?.email || 'ravirajjavvadi');
       const res = await fetch('/api/admin/users', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -87,12 +131,13 @@ export default function AdminDashboard() {
   // --- STYLES (Sovereign Inline System) ---
   const styles = {
     container: {
-      minHeight: '100vh',
+      height: '100dvh',
       backgroundColor: '#0a0a0c',
       color: '#f0f0f0',
       fontFamily: 'system-ui, -apple-system, sans-serif',
       padding: '40px 20px',
       overflowY: 'auto' as const,
+      WebkitOverflowScrolling: 'touch' as const,
     },
     wrapper: {
       maxWidth: '1000px',
@@ -259,11 +304,49 @@ export default function AdminDashboard() {
           </select>
         </div>
 
-        {status.msg && (
-          <div style={{ padding: '15px', borderRadius: '12px', marginBottom: '30px', fontSize: '11px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '1px', backgroundColor: status.type === 'success' ? 'rgba(16,185,129,0.1)' : 'rgba(239,68,68,0.1)', border: `1px solid ${status.type === 'success' ? 'rgba(16,185,129,0.2)' : 'rgba(239,68,68,0.2)'}`, color: status.type === 'success' ? '#34d399' : '#f87171' }}>
-            {status.msg}
+      {status.msg && (
+        <div style={{ padding: '15px', borderRadius: '12px', marginBottom: '30px', fontSize: '11px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '1px', backgroundColor: status.type === 'success' ? 'rgba(16,185,129,0.1)' : 'rgba(239,68,68,0.1)', border: `1px solid ${status.type === 'success' ? 'rgba(16,185,129,0.2)' : 'rgba(239,68,68,0.2)'}`, color: status.type === 'success' ? '#34d399' : '#f87171' }}>
+          {status.msg}
+        </div>
+      )}
+
+      {/* [SOVEREIGN MASTER KEYS]: Centralized Infrastructure Control */}
+      <div style={{ ...styles.card, border: '1px solid rgba(16,185,129,0.2)', backgroundColor: 'rgba(16,185,129,0.02)', marginBottom: '40px' }}>
+        <div style={styles.nodeHeader}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <span style={{ fontSize: '18px', fontWeight: 900, color: '#10b981' }}>🛰️ Sovereign Key Vault</span>
+            <span style={styles.badge(true)}>MASTER CONSOLE</span>
           </div>
-        )}
+          <p style={{ fontSize: '10px', color: 'rgba(16,185,129,0.5)', fontWeight: 800 }}>These keys serve as the global failover for all nodes.</p>
+        </div>
+        
+        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '20px' }}>
+          <div>
+            <label style={{ fontSize: '9px', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '2px', color: 'rgba(16,185,129,0.6)', display: 'block', marginBottom: '8px' }}>⚡ Master Groq Neural Keys</label>
+            <textarea
+              style={styles.textarea}
+              placeholder="System-wide Groq keys..."
+              value={masterKeys.groq}
+              onChange={(e) => setMasterKeys(prev => ({ ...prev, groq: e.target.value }))}
+            />
+          </div>
+          <div>
+            <label style={{ fontSize: '9px', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '2px', color: '#4ade80', display: 'block', marginBottom: '8px' }}>🌌 Master Gemini Vision Keys</label>
+            <textarea
+              style={{ ...styles.textarea, color: '#4ade80', borderColor: 'rgba(16,185,129,0.15)' }}
+              placeholder="System-wide Gemini keys..."
+              value={masterKeys.gemini}
+              onChange={(e) => setMasterKeys(prev => ({ ...prev, gemini: e.target.value }))}
+            />
+          </div>
+        </div>
+        <button 
+          style={{ width: '100%', backgroundColor: '#10b981', color: '#000', border: 'none', padding: '14px', borderRadius: '12px', fontSize: '12px', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '2px', cursor: 'pointer', transition: 'all 0.2s' }}
+          onClick={handleUpdateMasterKeys}
+        >
+          {updatingId === 'master' ? 'UPDATING SOVEREIGN VAULT...' : 'Lock Sovereign Master Keys'}
+        </button>
+      </div>
 
         <div style={{ display: 'grid', gap: '16px' }}>
           {filteredUsers.length === 0 ? (
