@@ -34,10 +34,41 @@ export default function SovereignCinematic({ manifestJson }: SovereignCinematicP
   const synthRef = useRef<SpeechSynthesis | null>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
+  // [JSON AUTO-REPAIR ENGINE]: Hardens against AI truncation
+  const repairedJson = useMemo(() => {
+    let json = manifestJson.trim();
+    if (!json) return "[]";
+    
+    // Count unclosed structures
+    let openBraces = (json.match(/\{/g) || []).length;
+    let closeBraces = (json.match(/\}/g) || []).length;
+    let openBrackets = (json.match(/\[/g) || []).length;
+    let closeBrackets = (json.match(/\]/g) || []).length;
+    
+    // Attempt rescue if truncated
+    try {
+      if (openBraces > closeBraces) json += "}".repeat(openBraces - closeBraces);
+      if (openBrackets > closeBrackets) json += "]".repeat(openBrackets - closeBrackets);
+      
+      // If still invalid, try to find the last valid scene boundary
+      JSON.parse(json); 
+      return json;
+    } catch {
+      // Deep recovery: Find last complete scene object
+      const lastIndex = json.lastIndexOf('}');
+      if (lastIndex !== -1) {
+         let subJson = json.substring(0, lastIndex + 1);
+         if (openBrackets > closeBrackets) subJson += "]";
+         try { JSON.parse(subJson); return subJson; } catch { return "[]"; }
+      }
+      return "[]";
+    }
+  }, [manifestJson]);
+
   // [CACHE]: Stabilize URLs across re-renders
   const sceneUrls = useMemo(() => {
     try {
-      const parsed = JSON.parse(manifestJson);
+      const parsed = JSON.parse(repairedJson);
       if (!Array.isArray(parsed)) return [];
       return parsed.map((s, i) => {
         const prompt = encodeURIComponent(s.imagePrompt);
@@ -63,7 +94,7 @@ export default function SovereignCinematic({ manifestJson }: SovereignCinematicP
 
   useEffect(() => {
     try {
-      const parsed = JSON.parse(manifestJson);
+      const parsed = JSON.parse(repairedJson);
       if (Array.isArray(parsed)) {
         setScenes(parsed);
         setIsLoadingManifest(false);

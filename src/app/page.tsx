@@ -431,9 +431,13 @@ Requirements:
                               <NeuralCanvas prompt={msg.content.match(/\[ART_PROMPT:\s*(.*?)\]/)?.[1] || ''} />
                             )}
 
-                            {msg.content.match(/<<<CINEMATIC_MANIFEST_START>>>([\s\S]*?)<<<CINEMATIC_MANIFEST_END>>>/) && (
-                              <SovereignCinematic manifestJson={msg.content.match(/<<<CINEMATIC_MANIFEST_START>>>([\s\S]*?)<<<CINEMATIC_MANIFEST_END>>>/)?.[1] || '[]'} />
-                            )}
+                            {(() => {
+                              const manifestMatch = msg.content.match(/<<<CINEMATIC_MANIFEST_START>>>([\s\S]*?)(?:<<<CINEMATIC_MANIFEST_END>>>|$)/);
+                              if (manifestMatch) {
+                                return <SovereignCinematic manifestJson={manifestMatch[1].trim()} />;
+                              }
+                              return null;
+                            })()}
                           </>
                         ) : (
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
