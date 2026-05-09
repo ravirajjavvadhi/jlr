@@ -20,7 +20,6 @@ import Settings from '@/components/Settings';
 import NeuralCanvas from '@/components/NeuralCanvas';
 import SovereignCinematic from '@/components/SovereignCinematic';
 import Sidebar from '@/components/Sidebar';
-import ArtifactPanel from '@/components/ArtifactPanel';
 
 const CodeBlock = ({ inline, className, children, ...props }: any) => {
   const [copied, setCopied] = useState(false);
@@ -70,8 +69,6 @@ export default function AppMain() {
   const [selectedModel, setSelectedModel] = useState(GROQ_MODELS[0].id);
   const [files, setFiles] = useState<FileData[]>([]);
   const [isMobile, setIsMobile] = useState(false);
-  const [isArtifactOpen, setIsArtifactOpen] = useState(false);
-  const [artifactManifest, setArtifactManifest] = useState<any>(null);
   const [hasMounted, setHasMounted] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [responseIntelligence, setResponseIntelligence] = useState<'auto' | 'concise' | 'medium' | 'long'>('auto');
@@ -213,35 +210,9 @@ Requirements:
       onDone: (full: string) => {
         setIsLoading(false);
         setIsGeneratingImage(false);
-        
-        // [SOVEREIGN SILENT EXTRACTION]: Extract and strip manifest from chat history
-        let cleanContent = full;
-        const manifestMatch = full.match(/<<<PROJECT_MANIFEST_START>>>([\s\S]*?)<<<PROJECT_MANIFEST_END>>>/);
-        
-        if (manifestMatch) {
-          try {
-            const manifest = JSON.parse(manifestMatch[1]);
-            setArtifactManifest(manifest);
-            setIsArtifactOpen(true);
-            // Strip the manifest block from the message content shown in chat
-            cleanContent = full.replace(/<<<PROJECT_MANIFEST_START>>>[\s\S]*?<<<PROJECT_MANIFEST_END>>>/, '').trim();
-          } catch (e) {
-            console.error("Manifest Parsing Failed", e);
-          }
-        }
-
-        const finalMessages = [...updatedMessagesWithAI, { role: 'assistant', content: cleanContent }];
+        const finalMessages = [...updatedMessagesWithAI, { role: 'assistant', content: full }];
         updateChatMessages(chatId, finalMessages);
         
-        // Update local state to show clean content
-        setLocalMessages(prev => {
-          const updated = [...prev];
-          if (updated[updated.length - 1]?.role === 'assistant') {
-            updated[updated.length - 1] = { ...updated[updated.length - 1], content: cleanContent };
-          }
-          return updated;
-        });
-
         const isDefaultTitle = !currentChat?.title || currentChat.title === 'New Power Session';
         if (updatedMessagesWithAI.length === 1 && isDefaultTitle) {
           autoGenerateTitle(chatId, originalInput, full);
@@ -307,16 +278,11 @@ Requirements:
             logout={logout}
             setShowAuthModal={setShowAuthModal}
             onSettingsOpen={() => setSettingsOpen(true)}
-            onArtifactToggle={() => setIsArtifactOpen(!isArtifactOpen)}
           />
         )}
       </AnimatePresence>
 
-      <ArtifactPanel 
-        isOpen={isArtifactOpen} 
-        onClose={() => setIsArtifactOpen(false)} 
-        manifest={artifactManifest} 
-      />
+
 
       <main className="main-content" suppressHydrationWarning style={{ flex: 1, display: 'flex', flexDirection: 'column', position: 'relative', width: '100%', height: '100dvh' }}>
         <header style={{ padding: isMobile ? '0.5rem 0.75rem' : '0.8rem 1.75rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'rgba(2,2,2,0.7)', backdropFilter: 'blur(20px)', borderBottom: '1px solid var(--glass-border)', zIndex: 10, height: isMobile ? '56px' : 'auto' }}>

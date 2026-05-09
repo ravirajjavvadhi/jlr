@@ -3,6 +3,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import Link from 'next/link';
+import { usePathname, useRouter } from 'next/navigation';
 import { 
   PanelLeft, Plus, MessageSquare, User, Zap, 
   Settings as SettingsIcon, ShieldAlert, LogOut, Trash2, Edit2,
@@ -23,14 +24,15 @@ interface SidebarProps {
   logout: () => void;
   setShowAuthModal: (show: boolean) => void;
   onSettingsOpen: () => void;
-  onArtifactToggle: () => void;
 }
 
 const Sidebar: React.FC<SidebarProps> = ({
   isOpen, isMobile, onClose, chats, currentChatId, 
   setCurrentChatId, createNewChat, renameChat, deleteChat, 
-  user, logout, setShowAuthModal, onSettingsOpen, onArtifactToggle
+  user, logout, setShowAuthModal, onSettingsOpen
 }) => {
+  const pathname = usePathname();
+  const router = useRouter();
   const [renamingId, setRenamingId] = React.useState<string | null>(null);
   const [renameValue, setRenameValue] = React.useState('');
 
@@ -47,10 +49,10 @@ const Sidebar: React.FC<SidebarProps> = ({
   };
 
   const featuredModules = [
-    { id: 'canvas', name: 'Neural Canvas', icon: <Sparkles size={16} />, active: true, onClick: () => {} },
-    { id: 'search', name: 'Global Search', icon: <Globe size={16} />, active: false, onClick: () => {} },
-    { id: 'artifacts', name: 'Artifact Workspace', icon: <Code size={16} />, active: true, onClick: onArtifactToggle },
-    { id: 'memory', name: 'Memory Vault', icon: <Database size={16} />, active: false, onClick: () => {} },
+    { id: 'canvas', name: 'Neural Canvas', icon: <Sparkles size={16} />, active: true, route: '/', onClick: () => router.push('/') },
+    { id: 'search', name: 'Global Search', icon: <Globe size={16} />, active: false, route: '/search', onClick: () => {} },
+    { id: 'artifacts', name: 'Artifact Workspace', icon: <Code size={16} />, active: true, route: '/forge', onClick: () => router.push('/forge') },
+    { id: 'memory', name: 'Memory Vault', icon: <Database size={16} />, active: false, route: '/memory', onClick: () => {} },
   ];
 
   return (
