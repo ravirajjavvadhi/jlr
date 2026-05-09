@@ -23,12 +23,13 @@ interface SidebarProps {
   logout: () => void;
   setShowAuthModal: (show: boolean) => void;
   onSettingsOpen: () => void;
+  onArtifactToggle: () => void;
 }
 
 const Sidebar: React.FC<SidebarProps> = ({
   isOpen, isMobile, onClose, chats, currentChatId, 
   setCurrentChatId, createNewChat, renameChat, deleteChat, 
-  user, logout, setShowAuthModal, onSettingsOpen
+  user, logout, setShowAuthModal, onSettingsOpen, onArtifactToggle
 }) => {
   const [renamingId, setRenamingId] = React.useState<string | null>(null);
   const [renameValue, setRenameValue] = React.useState('');
@@ -46,10 +47,10 @@ const Sidebar: React.FC<SidebarProps> = ({
   };
 
   const featuredModules = [
-    { id: 'canvas', name: 'Neural Canvas', icon: <Sparkles size={16} />, active: true },
-    { id: 'search', name: 'Global Search', icon: <Globe size={16} />, active: false },
-    { id: 'artifacts', name: 'Artifact Workspace', icon: <Code size={16} />, active: false },
-    { id: 'memory', name: 'Memory Vault', icon: <Database size={16} />, active: false },
+    { id: 'canvas', name: 'Neural Canvas', icon: <Sparkles size={16} />, active: true, onClick: () => {} },
+    { id: 'search', name: 'Global Search', icon: <Globe size={16} />, active: false, onClick: () => {} },
+    { id: 'artifacts', name: 'Artifact Workspace', icon: <Code size={16} />, active: true, onClick: onArtifactToggle },
+    { id: 'memory', name: 'Memory Vault', icon: <Database size={16} />, active: false, onClick: () => {} },
   ];
 
   return (
@@ -108,21 +109,22 @@ const Sidebar: React.FC<SidebarProps> = ({
           {featuredModules.map(mod => (
              <div 
                key={mod.id}
+               onClick={mod.onClick}
                style={{ 
                  display: 'flex', 
                  alignItems: 'center', 
                  gap: '0.75rem', 
                  padding: '0.65rem 0.85rem', 
                  borderRadius: '10px',
-                 cursor: 'pointer',
+                 cursor: mod.active ? 'pointer' : 'default',
                  transition: 'all 0.2s',
-                 background: mod.id === 'canvas' ? 'rgba(16, 185, 129, 0.05)' : 'transparent',
-                 border: mod.id === 'canvas' ? '1px solid rgba(16, 185, 129, 0.1)' : '1px solid transparent'
+                 background: mod.active && mod.id !== 'search' && mod.id !== 'memory' ? 'rgba(16, 185, 129, 0.05)' : 'transparent',
+                 border: mod.active && mod.id !== 'search' && mod.id !== 'memory' ? '1px solid rgba(16, 185, 129, 0.1)' : '1px solid transparent'
                }}
                className="sidebar-featured-item"
              >
-                <div style={{ color: mod.id === 'canvas' ? '#10b981' : 'rgba(255,255,255,0.4)' }}>{mod.icon}</div>
-                <div style={{ fontSize: '0.8rem', fontWeight: 600, color: mod.id === 'canvas' ? '#fff' : 'rgba(255,255,255,0.5)' }}>{mod.name}</div>
+                <div style={{ color: mod.active && mod.id !== 'search' && mod.id !== 'memory' ? '#10b981' : 'rgba(255,255,255,0.4)' }}>{mod.icon}</div>
+                <div style={{ fontSize: '0.8rem', fontWeight: 600, color: mod.active && mod.id !== 'search' && mod.id !== 'memory' ? '#fff' : 'rgba(255,255,255,0.5)' }}>{mod.name}</div>
                 {!mod.active && <div style={{ marginLeft: 'auto', fontSize: '0.5rem', padding: '2px 6px', background: 'rgba(255,165,0,0.1)', color: '#ffa500', borderRadius: '4px', fontWeight: 900 }}>SOON</div>}
              </div>
           ))}
