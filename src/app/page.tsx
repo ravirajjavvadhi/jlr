@@ -61,6 +61,8 @@ const CodeBlock = ({ inline, className, children, ...props }: any) => {
 
 export default function AppMain() {
   const { user, loading: authLoading, chats, currentChatId, setCurrentChatId, createNewChat, updateChatMessages, renameChat, deleteChat, logout } = useAuth();
+  const [artifactManifest, setArtifactManifest] = useState<any>(null);
+  const [isSearchMode, setIsSearchMode] = useState(false);
   const [input, setInput] = useState('');
   const [isSidebarOpen, setSidebarOpen] = useState(true);
   const [isSettingsOpen, setSettingsOpen] = useState(false);
@@ -191,6 +193,7 @@ Requirements:
     const opts = {
       userId: user?.id,
       responseLength: responseIntelligence,
+      isSearchMode: isSearchMode,
       // [CRITICAL FIX]: Only include TEXT-based documents in fileContext, NEVER base64 images/PDFs
       fileContext: originalFiles.filter(f => f.type === 'document').length > 0
         ? originalFiles.filter(f => f.type === 'document').map(f => `File: ${f.name}\nContent: ${f.data}`).join('\n\n')
@@ -284,6 +287,8 @@ Requirements:
             user={user}
             logout={logout}
             setShowAuthModal={setShowAuthModal}
+            isSearchMode={isSearchMode}
+            onSearchToggle={() => setIsSearchMode(!isSearchMode)}
             onSettingsOpen={() => setSettingsOpen(true)}
           />
         )}

@@ -118,10 +118,49 @@ function transformGeminiStream(geminiBody: ReadableStream): ReadableStream {
     });
 }
 
+// [JLR SEARCH NODE]: Execute real-time intelligence gathering
+async function getGlobalIntelligence(query: string) {
+  const TAVILY_API_KEY = process.env.TAVILY_API_KEY;
+  if (!TAVILY_API_KEY) return null;
+  
+  try {
+    const response = await fetch('https://api.tavily.com/search', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        api_key: TAVILY_API_KEY,
+        query,
+        search_depth: 'basic',
+        include_answer: true,
+        max_results: 3
+      })
+    });
+    const data = await response.json();
+    return data;
+  } catch (e) {
+    console.error("[JLR-SEARCH]: Node Failure.", e);
+    return null;
+  }
+}
+
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { messages, model, provider, fileContext, userId } = body;
+    const { messages, model, provider, fileContext, userId, isSearchMode } = body;
+
+    const lastMessage = messages[messages.length - 1]?.content || '';
+    const isSearchIntent = isSearchMode || /today|date|time|current|latest|now|news|who is|what is|search/i.test(lastMessage);
+    
+    let intelligenceContext = '';
+    if (isSearchIntent) {
+      console.log(`[JLR-AI]: Activating Global Intelligence for: "${lastMessage}"`);
+      const searchData = await getGlobalIntelligence(lastMessage);
+      if (searchData) {
+        intelligenceContext = `\n\n[JLR GLOBAL INTELLIGENCE FEED]:\n` + 
+          (searchData.answer ? `Direct Answer: ${searchData.answer}\n` : '') + 
+          searchData.results.map((r: any) => `- ${r.title}: ${r.content} (${r.url})`).join('\n');
+      }
+    }
 
     // [KEY POOL]: Parse all keys
     let groqKeysRaw = process.env.GROQ_API_KEY || process.env.NEXT_PUBLIC_GROQ_API_KEY || '';
@@ -211,8 +250,8 @@ You are JLR AI (Supreme Edition). Your signature is absolute technical authority
 `;
 
     const systemMsg = finalMessages.find(m => m.role === 'system');
-    if (systemMsg) systemMsg.content = `${systemInstruction}\n\n${systemMsg.content}${fileContext ? `\n\n[ATTACHED CONTEXT]:\n${fileContext}` : ''}`;
-    else finalMessages.unshift({ role: 'system', content: `${systemInstruction}${fileContext ? `\n\n[ATTACHED CONTEXT]:\n${fileContext}` : ''}` });
+    if (systemMsg) systemMsg.content = `${systemInstruction}\n\n${intelligenceContext}\n\n${systemMsg.content}${fileContext ? `\n\n[ATTACHED CONTEXT]:\n${fileContext}` : ''}`;
+    else finalMessages.unshift({ role: 'system', content: `${systemInstruction}${intelligenceContext}${fileContext ? `\n\n[ATTACHED CONTEXT]:\n${fileContext}` : ''}` });
 
     // [DETECT VISION MODE]
     const hasVisionContent = messages.some((m: any) =>
