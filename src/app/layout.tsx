@@ -20,7 +20,7 @@ export const metadata: Metadata = {
     siteName: "JLR AI SUPREMACY",
     images: [
       {
-        url: "https://jlr-omega.vercel.app/metaforjlr.png", // User absolute asset
+        url: "https://jlr-omega.vercel.app/metaforjlr.png?v=3", // Cache buster added
         width: 1200,
         height: 630,
         alt: "JLR AI SUPREMACY Preview",
@@ -34,7 +34,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "JLR AI SUPREMACY | NEURAL COGNITION",
     description: "The peak of futuristic AI intelligence. Experience cinematic UI and absolute multimedia sovereignty.",
-    images: ["https://jlr-omega.vercel.app/metaforjlr.png"],
+    images: ["https://jlr-omega.vercel.app/metaforjlr.png?v=3"],
   },
   appleWebApp: {
     capable: true,
@@ -59,10 +59,10 @@ export default function RootLayout({
   return (
     <html lang="en" prefix="og: http://ogp.me/ns#" suppressHydrationWarning>
       <head>
-        {/* Absolute Redundancy for WhatsApp Status/Telegram/LinkedIn */}
-        <meta property="og:image:secure_url" content="https://jlr-omega.vercel.app/metaforjlr.png" />
-        <meta itemProp="image" content="https://jlr-omega.vercel.app/metaforjlr.png" />
-        <link rel="image_src" href="https://jlr-omega.vercel.app/metaforjlr.png" />
+        {/* Absolute Redundancy with Cache Buster */}
+        <meta property="og:image:secure_url" content="https://jlr-omega.vercel.app/metaforjlr.png?v=3" />
+        <meta itemProp="image" content="https://jlr-omega.vercel.app/metaforjlr.png?v=3" />
+        <link rel="image_src" href="https://jlr-omega.vercel.app/metaforjlr.png?v=3" />
         
         <link rel="icon" href="/lion-core.png?v=2" />
         <link rel="apple-touch-icon" href="/lion-core.png?v=2" />
