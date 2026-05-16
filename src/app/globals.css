@@ -99,6 +99,18 @@ button, a, .clickable, .sidebar-item, select, [role="button"] {
   pointer-events: auto !important;
 }
 
+.scanlines, .neural-overlay, body::before, body::after {
+  pointer-events: none !important;
+  user-select: none !important;
+  z-index: 1; /* Low level cinematic layers */
+}
+
+#chat-input-sovereign {
+  pointer-events: auto !important;
+  position: relative;
+  z-index: 3000001 !important;
+}
+
 body {
   background-color: var(--background);
   color: var(--foreground);

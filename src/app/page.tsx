@@ -519,16 +519,17 @@ Requirements:
           </div>
         </div>
 
-        {/* COMMAND CENTER - ULTRA HARDENED LAYER */}
+        {/* COMMAND CENTER - FIXED VIEWPORT LAYER */}
         <div className="command-center" style={{ 
-          padding: isMobile ? '1rem 0.75rem 2rem 0.75rem' : '20px 2rem 40px 2rem', 
-          background: 'rgba(2,2,2,0.98)',
-          borderTop: '1px solid rgba(255,255,255,0.05)',
-          backdropFilter: 'blur(30px)',
-          zIndex: 2000000, // Absolute peak priority
-          position: 'sticky',
+          position: 'fixed',
           bottom: 0,
-          pointerEvents: 'auto'
+          left: isMobile ? 0 : (isSidebarOpen ? '280px' : 0),
+          right: 0,
+          padding: isMobile ? '1rem' : '20px 2rem 40px 2rem', 
+          background: 'linear-gradient(to top, #010101 80%, transparent)',
+          zIndex: 3000000, // Peak hierarchy
+          pointerEvents: 'none', // Pass-through for the wrapper
+          transition: 'left 0.3s ease'
         }}>
           <div className="input-container" style={{ 
             margin: '0 auto', 
@@ -539,9 +540,10 @@ Requirements:
             display: 'flex',
             flexDirection: 'column',
             gap: '10px',
-            background: 'rgba(255,255,255,0.03)',
-            border: '1px solid var(--glass-border)',
-            pointerEvents: 'auto'
+            background: 'rgba(5,5,5,0.9)', // Solid-ish background to avoid filter bugs
+            border: '1px solid rgba(255,255,255,0.1)',
+            boxShadow: '0 10px 40px rgba(0,0,0,0.5)',
+            pointerEvents: 'auto' // Re-enable for the actual box
           }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                <div style={{ display: 'flex', gap: '8px' }}>
@@ -590,6 +592,7 @@ Requirements:
                 onChange={(e) => setInput(e.target.value)} 
                 placeholder="Synchronize command..." 
                 rows={1}
+                id="chat-input-sovereign"
                 style={{ 
                   flex: 1, 
                   maxHeight: '120px', 
@@ -639,7 +642,7 @@ Requirements:
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            style={{ position: 'fixed', inset: 0, zIndex: 3000000, background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(10px)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+            style={{ position: 'fixed', inset: 0, zIndex: 4000000, background: 'rgba(0,0,0,0.95)', backdropFilter: 'blur(20px)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
           >
             <AuthScreen onClose={() => setShowAuthModal(false)} />
           </motion.div>
