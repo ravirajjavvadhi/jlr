@@ -136,10 +136,18 @@ body {
   color: var(--foreground);
   font-family: var(--font-brand);
   overflow: hidden;
-  height: 100dvh;
-  width: 100vw;
-  position: fixed; /* Prevents viewport bounce/move on mobile keyboard */
-  touch-action: pan-y; /* Allow vertical panning while blocking zoom/scroll bounce */
+  height: 100%;
+  width: 100%;
+  position: fixed; /* Absolute lock */
+  inset: 0;
+  touch-action: none; /* Block browser pull-to-refresh and multi-touch wobble */
+  -webkit-overflow-scrolling: touch;
+}
+
+html {
+  overflow: hidden;
+  height: 100%;
+  width: 100%;
 }
 
 /* Supremacy Background Scanline Effect */

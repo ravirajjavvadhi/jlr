@@ -337,27 +337,23 @@ Requirements:
         )}
       </AnimatePresence>
       
-      <AnimatePresence>
-        {isSidebarOpen && (
-          <Sidebar 
-            isOpen={isSidebarOpen}
-            isMobile={isMobile}
-            onClose={() => setSidebarOpen(false)}
-            chats={chats}
-            currentChatId={currentChatId}
-            setCurrentChatId={setCurrentChatId}
-            createNewChat={createNewChat}
-            renameChat={renameChat}
-            deleteChat={deleteChat}
-            user={user}
-            logout={logout}
-            setShowAuthModal={setShowAuthModal}
-            isSearchMode={isSearchMode}
-            onSearchToggle={() => setIsSearchMode(!isSearchMode)}
-            onSettingsOpen={() => setSettingsOpen(true)}
-          />
-        )}
-      </AnimatePresence>
+      <Sidebar 
+        isOpen={isSidebarOpen} 
+        isMobile={isMobile} 
+        onClose={() => setSidebarOpen(false)}
+        chats={chats}
+        currentChatId={currentChatId}
+        setCurrentChatId={setCurrentChatId}
+        createNewChat={createNewChat}
+        renameChat={renameChat}
+        deleteChat={deleteChat}
+        user={user}
+        logout={logout}
+        setShowAuthModal={setShowAuthModal}
+        onSettingsOpen={() => setSettingsOpen(true)}
+        isSearchMode={isSearchMode}
+        onSearchToggle={() => setIsSearchMode(!isSearchMode)}
+      />
 
       <main 
         className="main-content" 
@@ -368,7 +364,7 @@ Requirements:
           flexDirection: 'column', 
           position: 'relative', 
           width: '100%', 
-          height: '100dvh', // Explicit height to prevent keyboard shift
+          height: '100%',
           overflow: 'hidden'
         }}
       >
@@ -430,13 +426,18 @@ Requirements:
         <div className="chat-scroll" ref={scrollRef} style={{ 
           flex: 1, 
           overflowY: 'auto', 
+          overflowX: 'hidden',
           display: 'flex', 
           flexDirection: 'column', 
           alignItems: 'center',
           WebkitOverflowScrolling: 'touch',
+          touchAction: 'pan-y', // Specifically allow vertical panning here
           paddingTop: isMobile ? '20px' : '40px',
           paddingBottom: '160px',
-          position: 'relative'
+          paddingLeft: '1rem', // Safety padding
+          paddingRight: '1rem',
+          position: 'relative',
+          width: '100%'
         }}>
           <div className="chat-container" style={{ 
             width: '100%', 
