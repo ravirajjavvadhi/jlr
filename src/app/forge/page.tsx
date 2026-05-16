@@ -12,7 +12,6 @@ import Sidebar from '@/components/Sidebar';
 import ArtifactPanel from '@/components/ArtifactPanel';
 import { useAuth } from '@/services/authContext';
 import { GROQ_MODELS } from '@/services/aiService';
-
 export default function ForgePage() {
   const { user, chats, currentChatId, setCurrentChatId, createNewChat, updateChatMessages, renameChat, deleteChat, logout } = useAuth();
   const [input, setInput] = useState('');

@@ -191,11 +191,15 @@ Requirements:
 
     abortControllerRef.current = new AbortController();
 
+    const videoFileObj = originalFiles.find(f => f.type === 'video')?.file;
+
     const opts = {
       userId: user?.id,
       responseLength: responseIntelligence,
       isSearchMode: isSearchMode,
       isPrivacyMode: isPrivacyMode, // [INCOGNITO]: Bypass persistence
+      videoFile: videoFileObj, // [OMNI-MODE]: Pass raw file
+
       // [CRITICAL FIX]: Only include TEXT-based documents in fileContext, NEVER base64 images/PDFs
       fileContext: originalFiles.filter(f => f.type === 'document').length > 0
         ? originalFiles.filter(f => f.type === 'document').map(f => `File: ${f.name}\nContent: ${f.data}`).join('\n\n')
@@ -300,6 +304,7 @@ Requirements:
           />
         )}
       </AnimatePresence>
+
 
 
 

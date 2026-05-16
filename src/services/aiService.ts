@@ -54,6 +54,7 @@ export interface MessageOptions {
   isSearchMode?: boolean;
   isPrivacyMode?: boolean;
   signal?: AbortSignal;
+  videoFile?: File; // Unified Omni-Mode support
 }
 
 export async function sendMessage(messages: any[], modelId: string, options: MessageOptions = {}) {
@@ -115,23 +116,35 @@ export async function sendMessage(messages: any[], modelId: string, options: Mes
   }
 
   try {
-    const payload = {
+    const payload: any = {
       model: finalModelId,
       messages: [
         { role: 'system', content: finalSystemPrompt }, 
-        ...prunedMessages.map(m => ({ role: m.role, content: m.content }))
+        ...prunedMessages.map(m => ({ role: m.role, content: m.content, attachments: m.attachments }))
       ],
       provider: finalProvider,
       fileContext: fileContext,
       userId: userId,
       isSearchMode: options.isSearchMode,
-      isPrivacyMode: options.isPrivacyMode // [SOVEREIGN PRIVACY]: Pass through to neural bridge
+      isPrivacyMode: options.isPrivacyMode
     };
+
+    let body: any = JSON.stringify(payload);
+    let headers: any = { 'Content-Type': 'application/json' };
+
+    // [OMNI-MODE]: If video is present, use FormData for huge payload stability
+    if (options.videoFile) {
+      const formData = new FormData();
+      formData.append('video', options.videoFile);
+      formData.append('payload', JSON.stringify(payload));
+      body = formData;
+      headers = {}; // Let browser set boundary
+    }
 
     const response = await fetch('/api/chat', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
+      headers: headers,
+      body: body,
       signal: options.signal,
     });
 

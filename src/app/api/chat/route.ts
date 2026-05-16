@@ -178,10 +178,55 @@ async function getGlobalIntelligence(query: string): Promise<{ answer?: string; 
   return null;
 }
 
+// --- GEMINI FILE API (FOR VIDEOS) ---
+const GEMINI_UPLOAD_URL = 'https://generativelanguage.googleapis.com/upload/v1beta/files';
+const GEMINI_FILE_URL = 'https://generativelanguage.googleapis.com/v1beta/files';
+
+async function uploadToGemini(blob: Blob, mimeType: string, filename: string, apiKey: string) {
+  const uploadMetadata = { file: { display_name: filename } };
+  const metadataBlob = new Blob([JSON.stringify(uploadMetadata)], { type: 'application/json' });
+  const formData = new FormData();
+  formData.append('metadata', metadataBlob);
+  formData.append('file', blob);
+
+  const res = await fetch(`${GEMINI_UPLOAD_URL}?key=${apiKey}`, {
+    method: 'POST',
+    headers: { 'X-Goog-Upload-Protocol': 'multipart' },
+    body: formData
+  });
+  if (!res.ok) throw new Error(`Gemini Upload failed: ${await res.text()}`);
+  return (await res.json()).file;
+}
+
+async function waitForFileActive(fileUri: string, apiKey: string) {
+  const fileId = fileUri.split('/').pop();
+  for (let i = 0; i < 20; i++) {
+    const res = await fetch(`${GEMINI_FILE_URL}/${fileId}?key=${apiKey}`);
+    const data = await res.json();
+    if (data.state === 'ACTIVE') return data;
+    if (data.state === 'FAILED') throw new Error('Video processing failed');
+    await new Promise(r => setTimeout(r, 3000));
+  }
+  throw new Error('Video processing timeout');
+}
+
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json();
-    const { messages, model, provider, fileContext, userId, isSearchMode, isPrivacyMode } = body;
+    let rawBody;
+    let videoFile: File | null = null;
+    const contentType = req.headers.get('content-type') || '';
+
+    if (contentType.includes('multipart/form-data')) {
+      const formData = await req.formData();
+      videoFile = formData.get('video') as File;
+      const payloadStr = formData.get('payload') as string;
+      rawBody = JSON.parse(payloadStr);
+    } else {
+      rawBody = await req.json();
+    }
+
+    const { messages, model, provider, fileContext, userId, isSearchMode, isPrivacyMode } = rawBody;
+
 
     // Build current IST date string
     const nowIST = new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', dateStyle: 'full', timeStyle: 'short' });
@@ -289,6 +334,59 @@ You are JLR AI (Supreme Edition). Your signature is absolute technical authority
         
         if (systemMsg) systemMsg.content = content + "\n\n" + systemMsg.content;
         else finalMessages.unshift({ role: 'system', content });
+
+        // [OMNI-MODE VIDEO PIPELINE]
+        if (videoFile && geminiKeys.length > 0) {
+           const apiKey = geminiKeys[0];
+           const decoder = new TextDecoder();
+           controller.enqueue(encoder.encode(`data: ${JSON.stringify({ choices: [{ delta: { content: '🎬 *JLR Omni-Vision Engine Initializing. Processing Video Data...*\n\n' } }] })}\n\n`));
+           
+           try {
+             const fileInfo = await uploadToGemini(videoFile, videoFile.type, videoFile.name, apiKey);
+             await waitForFileActive(fileInfo.uri, apiKey);
+             
+             const geminiRes = await fetch(`${GEMINI_BASE_URL}/models/gemini-1.5-pro:streamGenerateContent?alt=sse&key=${apiKey}`, {
+               method: 'POST',
+               headers: { 'Content-Type': 'application/json' },
+               body: JSON.stringify({
+                 contents: [{
+                   parts: [
+                     ...finalMessages.map(m => ({ role: m.role === 'assistant' ? 'model' : 'user', text: m.content })),
+                     { fileData: { mimeType: videoFile.type, fileUri: fileInfo.uri } }
+                   ]
+                 }],
+                 systemInstruction: { parts: [{ text: content }] },
+                 generationConfig: { temperature: 0.2, maxOutputTokens: 8192 }
+               })
+             });
+
+             if (geminiRes.ok) {
+               const reader = geminiRes.body!.getReader();
+               while(true) {
+                 const {done, value} = await reader.read();
+                 if (done) break;
+                 const raw = decoder.decode(value);
+                 raw.split('\n').forEach((line: string) => {
+                   if (line.startsWith('data: ')) {
+                     const dataStr = line.slice(6).trim();
+                     if (!dataStr || dataStr === '[DONE]') return;
+                     try {
+                        const text = JSON.parse(dataStr).candidates?.[0]?.content?.parts?.[0]?.text;
+                        if (text) controller.enqueue(encoder.encode(`data: ${JSON.stringify({ choices: [{ delta: { content: text } }] })}\n\n`));
+                     } catch {}
+                   }
+                 });
+               }
+               controller.enqueue(encoder.encode(`data: [DONE]\n\n`));
+               controller.close();
+               return;
+             }
+           } catch (e: any) {
+             console.error('[VIDEO-OMNI-ERR]:', e);
+             controller.enqueue(encoder.encode(`data: ${JSON.stringify({ choices: [{ delta: { content: '\n\n⚠️ Video processing link failed. Reverting to standard chat nodes...' } }] })}\n\n`));
+           }
+        }
+
 
         // [ROUTING LOGIC]
         const hasVisionContent = messages.some((m: any) => Array.isArray(m.content) && m.content.some((c: any) => c.type === 'image_url'));

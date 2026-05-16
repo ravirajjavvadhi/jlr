@@ -2,7 +2,7 @@
 
 import { useState, useCallback } from 'react';
 import { useDropzone } from 'react-dropzone';
-import { FileText, X, Paperclip, Loader2, Eye, ShieldAlert } from 'lucide-react';
+import { FileText, X, Paperclip, Loader2, Eye, ShieldAlert, Video } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/services/authContext';
 
@@ -10,8 +10,9 @@ import { useAuth } from '@/services/authContext';
 export type FileData = {
   id: string;
   name: string;
-  type: 'image' | 'document' | 'pdf_visual';
-  data: string;       // base64 for images, text for documents, base64 of first page for pdf_visual
+  type: 'image' | 'document' | 'pdf_visual' | 'video';
+  data: string;       // base64 for images, text for documents, base64 of first page for pdf_visual/video
+  file?: File;        // Raw file for large uploads (videos)
   pages?: string[];   // All rendered page images for PDF (as data URLs)
   preview?: string;
 };
@@ -161,6 +162,26 @@ export default function FileUploader({ onFilesChange, files, showButton = true, 
           });
         }
 
+      // ── VIDEOS ──
+      } else if (file.type.startsWith('video/')) {
+        setStatusLabel('Initializing Video Link...');
+        try {
+          // Generate a video thumbnail if possible
+          const preview = URL.createObjectURL(file);
+          newFiles.push({
+            id: Math.random().toString(36).substr(2, 9),
+            name: file.name,
+            type: 'video',
+            data: '', // Large video, don't store base64 in state
+            file: file,
+            preview: preview
+          });
+          setProgress(90);
+        } catch (err) {
+          console.error('[Uploader] Video prep failed:', err);
+        }
+      
+
       // ── PDFs → VISUAL INTELLIGENCE ──
       } else if (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')) {
         setStatusLabel('🧠 Vision Engine activating...');
@@ -230,6 +251,7 @@ export default function FileUploader({ onFilesChange, files, showButton = true, 
     noClick: true,
     accept: {
       'image/*': [],
+      'video/*': [],
       'application/pdf': ['.pdf'],
       'text/plain': ['.txt'],
       'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx'],
@@ -293,6 +315,12 @@ export default function FileUploader({ onFilesChange, files, showButton = true, 
                     }
                     <div style={{ position: 'absolute', bottom: '2px', right: '2px', background: 'rgba(0,242,254,0.8)', borderRadius: '3px', padding: '1px 3px', fontSize: '0.45rem', fontWeight: 900, color: '#000' }}>
                       {file.pages?.length || 1}P
+                    </div>
+                  </div>
+                ) : file.type === 'video' ? (
+                  <div style={{ width: '100%', height: '100%', position: 'relative' }}>
+                    <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(99, 102, 241, 0.2)' }}>
+                       <Video size={20} color="#6366f1" />
                     </div>
                   </div>
                 ) : (
