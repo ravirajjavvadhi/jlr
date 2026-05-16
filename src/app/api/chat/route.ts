@@ -27,6 +27,14 @@ function mapModelId(modelId: string, provider: string): string {
     }
 }
 
+// [NEURAL SANITIZER]: Strip non-standard metadata (like attachments) before sending to strict providers
+function cleanMessages(messages: any[]): any[] {
+    return messages.map(m => {
+        const { role, content, name } = m;
+        return { role, content, ...(name ? { name } : {}) };
+    });
+}
+
 // [GEMINI HANDLER]: Native Gemini API call (not OpenAI-compatible)
 async function callGemini(apiKey: string, modelId: string, messages: any[], stream: boolean): Promise<Response> {
     // Convert OpenAI message format to Gemini format
@@ -360,7 +368,24 @@ You are JLR AI (Supreme Edition). Your signature is absolute technical authority
                body: JSON.stringify({
                  contents: [{
                    parts: [
-                     ...finalMessages.filter(m => m.role !== 'system').map(m => ({ role: m.role === 'assistant' ? 'model' : 'user', text: m.content })),
+                     ...finalMessages.filter(m => m.role !== 'system').flatMap(m => {
+                        const role = m.role === 'assistant' ? 'model' : 'user';
+                        if (Array.isArray(m.content)) {
+                          return m.content.map((c: any) => {
+                            if (c.type === 'image_url') {
+                              const b64 = c.image_url?.url || '';
+                              if (b64.startsWith('data:')) {
+                                const headerParts = b64.split(',');
+                                const mimeType = headerParts[0].split(';')[0].replace('data:', '');
+                                const data = headerParts[1];
+                                return { inlineData: { mimeType, data } };
+                              }
+                            }
+                            return { text: c.text || '' };
+                          });
+                        }
+                        return [{ text: m.content || '' }];
+                     }),
                      { fileData: { mimeType: 'video/mp4', fileUri: finalVideoUri } }
                    ]
                  }],
@@ -478,7 +503,12 @@ You are JLR AI (Supreme Edition). Your signature is absolute technical authority
               const response = await fetch(`${baseUrl}/chat/completions`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}`, 'HTTP-Referer': 'https://jlr-ai.vercel.app' },
-                body: JSON.stringify({ model: mappedModel, messages: finalMessages, stream: true, max_tokens: 8192 }),
+                body: JSON.stringify({ 
+                  model: mappedModel, 
+                  messages: cleanMessages(finalMessages), 
+                  stream: true, 
+                  max_tokens: 8192 
+                }),
               });
               
               if (response.ok) {
