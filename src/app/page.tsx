@@ -371,7 +371,7 @@ Requirements:
                             </ReactMarkdown>
 
                             {msg.content?.match(/\[ART_PROMPT:\s*(.*?)\]/) && (
-                              <NeuralCanvas prompt={msg.content?.match(/\[ART_PROMPT:\s*(.*?)\]/)?.[1] || ''} />
+                              <NeuralCanvas prompt={msg.content?.match(/\[ART_PROMPT:\s*(.*?)\]/)?.[1] || ''} userId={user?.id} />
                             )}
 
                             {(() => {
