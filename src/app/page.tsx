@@ -268,7 +268,17 @@ Requirements:
   };
 
   return (
-    <div className="app-container" suppressHydrationWarning style={{ position: 'relative', overflow: 'hidden', height: '100dvh', display: 'flex', background: '#020202' }}>
+    <div className="app-container" suppressHydrationWarning style={{ 
+      position: 'fixed', 
+      inset: 0, 
+      overflow: 'hidden', 
+      height: '100dvh', 
+      display: 'flex', 
+      background: '#010101' 
+    }}>
+      {/* Cinematic Background Scanlines */}
+      <div className="scanlines" style={{ pointerEvents: 'none' }} />
+      
       <Settings isOpen={isSettingsOpen} onClose={() => setSettingsOpen(false)} />
       
       <AnimatePresence>
@@ -279,6 +289,7 @@ Requirements:
             exit={{ opacity: 0 }}
             onClick={() => setSidebarOpen(false)}
             className="mobile-overlay"
+            style={{ zIndex: 100 }}
           />
         )}
       </AnimatePresence>
@@ -305,61 +316,119 @@ Requirements:
         )}
       </AnimatePresence>
 
-
-
-
-      <main className="main-content" suppressHydrationWarning style={{ flex: 1, display: 'flex', flexDirection: 'column', position: 'relative', width: '100%', height: '100dvh' }}>
-        <header style={{ padding: isMobile ? '0.5rem 0.75rem' : '0.8rem 1.75rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'rgba(2,2,2,0.7)', backdropFilter: 'blur(20px)', borderBottom: '1px solid var(--glass-border)', zIndex: 10, height: isMobile ? '56px' : 'auto' }}>
-          <div style={{ display: 'flex', alignItems: 'center', flex: 1 }}>
-            <button onClick={() => setSidebarOpen(true)} className="btn-ghost" style={{ padding: '8px', background: 'transparent', border: 'none', color: '#fff' }}><PanelLeft size={22} /></button>
+      <main 
+        className="main-content" 
+        suppressHydrationWarning 
+        style={{ 
+          flex: 1, 
+          display: 'flex', 
+          flexDirection: 'column', 
+          position: 'relative', 
+          width: '100%', 
+          height: '100dvh', // Explicit height to prevent keyboard shift
+          overflow: 'hidden'
+        }}
+      >
+        {/* PEAK HEADER */}
+        <header style={{ 
+          padding: isMobile ? '0.75rem 1rem' : '1rem 2rem', 
+          display: 'flex', 
+          alignItems: 'center', 
+          justifyContent: 'space-between', 
+          background: 'rgba(1,1,1,0.6)', 
+          backdropFilter: 'blur(30px)', 
+          borderBottom: '1px solid var(--glass-border)', 
+          zIndex: 50,
+          position: 'relative'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+            <button 
+              onClick={() => setSidebarOpen(true)} 
+              style={{ padding: '8px', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--glass-border)', borderRadius: '10px', color: '#fff', cursor: 'pointer' }}
+            >
+              <PanelLeft size={20} />
+            </button>
+            {!isMobile && (
+              <div style={{ display: 'flex', flexDirection: 'column' }}>
+                <span style={{ fontSize: '0.65rem', fontWeight: 900, letterSpacing: '2px', color: 'var(--accent-primary)', textTransform: 'uppercase' }}>JLR AI</span>
+                <span style={{ fontSize: '0.9rem', fontWeight: 800 }}>SUPREMACY</span>
+              </div>
+            )}
           </div>
 
-          <div style={{ flex: 3, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-            <select value={selectedModel} onChange={(e) => setSelectedModel(e.target.value)} style={{ background: 'transparent', color: 'rgba(255,255,255,0.9)', border: 'none', fontSize: isMobile ? '0.85rem' : '0.9rem', fontWeight: 800, cursor: 'pointer', outline: 'none', textAlign: 'center', width: 'auto' }}>
-              {GROQ_MODELS.map(m => <option key={m.id} value={m.id} style={{ background: '#080808' }}>{m.name.toUpperCase()}</option>)}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '4px', background: 'rgba(255,255,255,0.03)', padding: '6px 12px', borderRadius: '12px', border: '1px solid var(--glass-border)' }}>
+            <select 
+              value={selectedModel} 
+              onChange={(e) => setSelectedModel(e.target.value)} 
+              style={{ background: 'transparent', color: '#fff', border: 'none', fontSize: '0.8rem', fontWeight: 900, cursor: 'pointer', outline: 'none', appearance: 'none' }}
+            >
+              {GROQ_MODELS.map(m => <option key={m.id} value={m.id} style={{ background: '#0a0a0a' }}>{m.name.toUpperCase()}</option>)}
             </select>
-            <ChevronDown size={14} style={{ marginLeft: '4px', opacity: 0.5 }} />
+            <ChevronDown size={14} opacity={0.5} />
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flex: 1, justifyContent: 'flex-end' }}>
-            <button onClick={() => setSettingsOpen(true)} className="btn-ghost" style={{ padding: '8px', background: 'transparent', border: 'none', color: '#fff' }}><SettingsIcon size={20} /></button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+            <button 
+              onClick={() => setSettingsOpen(true)} 
+              style={{ width: '38px', height: '38px', borderRadius: '10px', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--glass-border)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', cursor: 'pointer' }}
+            >
+              <SettingsIcon size={18} />
+            </button>
           </div>
         </header>
 
-        <div className="chat-scroll" ref={scrollRef} style={{ flex: 1, overflowY: 'auto' }}>
-          <div className="chat-container" style={{ maxWidth: '850px', margin: '0 auto', padding: isMobile ? '1rem 1rem 220px 1rem' : '3rem 1.5rem 180px 1.5rem' }}>
+        {/* CHAT AREA */}
+        <div className="chat-scroll" ref={scrollRef} style={{ 
+          flex: 1, 
+          overflowY: 'auto', 
+          padding: isMobile ? '1rem' : '2rem 1rem',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center'
+        }}>
+          <div className="chat-container" style={{ width: '100%', maxWidth: '800px', paddingBottom: '160px' }}>
             {localMessages.length === 0 ? (
-              <div style={{ height: '55vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '2.5rem', opacity: 0.6 }}>
-                <motion.div animate={{ scale: [1, 1.15, 1], rotate: [0, 5, -5, 0] }} transition={{ duration: 4, repeat: Infinity }} style={{ width: '80px', height: '80px', background: 'var(--accent-gradient)', borderRadius: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 0 50px rgba(0, 242, 254, 0.4)' }}>
-                  <Zap size={40} fill="black" />
+              <div style={{ height: '50vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '2rem' }}>
+                <motion.div 
+                  animate={{ 
+                    rotate: [0, 90, 180, 270, 360],
+                    boxShadow: ['0 0 20px rgba(0,210,255,0.2)', '0 0 50px rgba(0,210,255,0.4)', '0 0 20px rgba(0,210,255,0.2)']
+                  }} 
+                  transition={{ duration: 10, repeat: Infinity, ease: 'linear' }}
+                  style={{ width: '100px', height: '100px', borderRadius: '30px', background: 'var(--accent-gradient)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                >
+                  <Zap size={50} fill="black" />
                 </motion.div>
-                <h1 className="text-beast" style={{ fontSize: isMobile ? '1.5rem' : '2.5rem', letterSpacing: isMobile ? '4px' : '8px', textAlign: 'center' }}>DEPLOY INTELLIGENCE</h1>
+                <div style={{ textAlign: 'center' }}>
+                  <h1 style={{ fontSize: isMobile ? '1.5rem' : '2.5rem', fontWeight: 900, letterSpacing: '8px', textTransform: 'uppercase', marginBottom: '0.5rem' }}>SYSTEM ONLINE</h1>
+                  <p style={{ fontSize: '0.75rem', fontWeight: 700, opacity: 0.4, letterSpacing: '4px' }}>AWAITING COMMANDS</p>
+                </div>
               </div>
             ) : (
               localMessages.map((msg: any) => (
-
-                <div key={msg.id} className={`message ${msg.role}`} style={{ marginBottom: '3.5rem' }}>
-                  <div style={{ display: 'flex', gap: '1.5rem' }}>
-                    <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: msg.role === 'assistant' ? 'var(--beast-gradient)' : 'rgba(255,255,255,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                      {msg.role === 'assistant' ? <Zap size={22} fill="black" /> : <User size={22} />}
-                    </div>
-                    <div className="prose" style={{ 
-                      flex: 1, 
-                      minWidth: 0, 
-                      overflowWrap: 'anywhere',
-                      wordBreak: 'normal'
+                <div key={msg.id} style={{ marginBottom: '3rem', opacity: 1 }}>
+                  <div style={{ display: 'flex', gap: isMobile ? '1rem' : '1.5rem', alignItems: 'flex-start' }}>
+                    <div style={{ 
+                      width: '36px', 
+                      height: '36px', 
+                      borderRadius: '10px', 
+                      background: msg.role === 'assistant' ? 'var(--accent-gradient)' : 'rgba(255,255,255,0.05)', 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      justifyContent: 'center',
+                      flexShrink: 0,
+                      marginTop: '4px'
                     }}>
-                      <div style={{ fontSize: '0.65rem', fontWeight: 900, opacity: 0.4, marginBottom: '0.75rem', letterSpacing: '1.5px', textTransform: 'uppercase' }}>
-                        {msg.role === 'assistant' ? 'JLR AI SUPREMACY' : 'COMMANDER'}
+                      {msg.role === 'assistant' ? <Zap size={18} fill="black" /> : <User size={18} />}
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: '0.65rem', fontWeight: 900, opacity: 0.3, letterSpacing: '2px', textTransform: 'uppercase', marginBottom: '0.75rem' }}>
+                        {msg.role === 'assistant' ? 'JLR SUPREMACY' : 'COMMANDER'}
                       </div>
-                      <div style={{ 
-                        padding: (msg as any).isError ? '1rem' : '0',
-                        background: (msg as any).isError ? 'rgba(255,107,107,0.05)' : 'transparent',
-                        borderRadius: '12px',
-                        border: (msg as any).isError ? '1px solid rgba(255,107,107,0.2)' : 'none',
-                        fontSize: isMobile ? '0.95rem' : '1.05rem',
-                        lineHeight: 1.7,
-                        color: 'rgba(255,255,255,0.9)'
+                      <div className="prose" style={{ 
+                        fontSize: isMobile ? '0.95rem' : '1.05rem', 
+                        lineHeight: 1.6, 
+                        color: msg.role === 'assistant' ? 'rgba(255,255,255,0.95)' : '#fff'
                       }}>
                         {msg.role === 'assistant' ? (
                           <>
@@ -388,11 +457,12 @@ Requirements:
                             })()}
                           </>
                         ) : (
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                            <p style={{ whiteSpace: 'pre-wrap', fontSize: '1.05rem', color: '#fff', lineHeight: 1.6 }}>{msg.content || ''}</p>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                            <p style={{ whiteSpace: 'pre-wrap' }}>{msg.content || ''}</p>
                             {msg.attachments?.map((at: any, i: number) => (
-                              <div key={i} style={{ fontSize: '0.7rem', opacity: 0.5, display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                                <Sparkles size={10} /> {at.name} ({at.type.toUpperCase()})
+                              <div key={i} className="hologram-card" style={{ padding: '8px 16px', fontSize: '0.7rem', fontWeight: 800, display: 'inline-flex', alignItems: 'center', gap: '8px', width: 'fit-content' }}>
+                                <FileUploader files={files} onFilesChange={setFiles} showButton={false} />
+                                {at.name}
                               </div>
                             ))}
                           </div>
@@ -404,163 +474,91 @@ Requirements:
               ))
             )}
             {isLoading && (
-              <div style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                {isGeneratingImage ? (
-                  <div style={{ 
-                    display: 'flex', 
-                    alignItems: 'center', 
-                    gap: '12px', 
-                    background: 'rgba(16,185,129,0.05)', 
-                    padding: '12px 20px', 
-                    borderRadius: '16px', 
-                    border: '1px solid rgba(16,185,129,0.15)',
-                    width: 'fit-content'
-                  }}>
-                    <Loader2 size={18} className="animate-spin" style={{ color: '#10b981' }} />
-                    <span style={{ fontSize: '0.7rem', fontWeight: 900, color: '#10b981', letterSpacing: '1.5px', textTransform: 'uppercase' }}>
-                      Synthesizing Neural Canvas...
-                    </span>
-                  </div>
-                ) : (
-                  <div style={{ opacity: 0.6 }}><LoaderPulse /></div>
-                )}
+              <div style={{ paddingLeft: isMobile ? '3.25rem' : '3.75rem' }}>
+                <LoaderPulse />
               </div>
             )}
           </div>
         </div>
 
+        {/* COMMAND CENTER */}
         <div className="command-center" style={{ 
           position: 'absolute', 
-          bottom: isMobile ? '16px' : '28px', 
+          bottom: 0, 
           left: 0, 
           right: 0, 
-          pointerEvents: 'none', 
-          padding: isMobile ? '0 0.75rem' : '0 1.5rem', 
-          zIndex: 50 
+          padding: isMobile ? '1rem 0.75rem 2rem 0.75rem' : '2rem', 
+          background: 'linear-gradient(to top, #010101 60%, transparent)',
+          zIndex: 100 
         }}>
-          <div className="input-container" style={{ 
-            pointerEvents: 'auto', 
+          <div className="input-container hologram-card" style={{ 
             margin: '0 auto', 
-            maxWidth: '900px', 
-            width: '100%',
-            display: 'flex', 
+            maxWidth: '850px', 
+            padding: '12px 16px',
+            borderRadius: '24px',
+            display: 'flex',
             flexDirection: 'column',
-            padding: isMobile ? '10px 14px' : '12px 20px',
-            background: 'rgba(28, 28, 30, 0.95)',
-            backdropFilter: 'blur(20px)',
-            border: '1px solid rgba(255, 255, 255, 0.15)',
-            borderRadius: isMobile ? '24px' : '32px',
-            boxShadow: '0 20px 50px rgba(0,0,0,0.5)'
+            gap: '10px'
           }}>
-            {/* CONTROL CENTER TOGGLES */}
-            <div style={{ display: 'flex', justifyContent: 'center', gap: '8px', margin: '-24px auto 12px auto', zIndex: 10 }}>
-              {/* SUPREME INTELLIGENCE TOGGLE */}
-              <button 
-                onClick={() => setIsSearchMode(!isSearchMode)}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.4rem',
-                  padding: '5px 12px',
-                  borderRadius: '16px',
-                  background: isSearchMode ? 'rgba(16, 185, 129, 0.12)' : 'rgba(0,0,0,0.6)',
-                  border: isSearchMode ? '1px solid rgba(16, 185, 129, 0.3)' : '1px solid rgba(255,255,255,0.08)',
-                  cursor: 'pointer',
-                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                  backdropFilter: 'blur(12px)',
-                  boxShadow: isSearchMode ? '0 0 12px rgba(16,185,129,0.15)' : '0 4px 12px rgba(0,0,0,0.2)'
-                }}
-              >
-                <Globe size={11} style={{ color: isSearchMode ? '#10b981' : 'rgba(255,255,255,0.3)' }} />
-                <span style={{ 
-                  fontSize: '0.6rem', 
-                  fontWeight: 900, 
-                  letterSpacing: '0.5px',
-                  color: isSearchMode ? '#10b981' : 'rgba(255,255,255,0.4)',
-                  whiteSpace: 'nowrap'
-                }}>
-                  {isSearchMode ? 'INTEL: ON' : 'LIGHTNING: FAST'}
-                </span>
-              </button>
-
-              {/* SOVEREIGN PRIVACY TOGGLE (INCOGNITO) */}
-              <button 
-                onClick={() => setIsPrivacyMode(!isPrivacyMode)}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.4rem',
-                  padding: '5px 12px',
-                  borderRadius: '16px',
-                  background: isPrivacyMode ? 'rgba(59, 130, 246, 0.12)' : 'rgba(0,0,0,0.6)',
-                  border: isPrivacyMode ? '1px solid rgba(59, 130, 246, 0.3)' : '1px solid rgba(255,255,255,0.08)',
-                  cursor: 'pointer',
-                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                  backdropFilter: 'blur(12px)',
-                  boxShadow: isPrivacyMode ? '0 0 12px rgba(59,130,246,0.15)' : '0 4px 12px rgba(0,0,0,0.2)'
-                }}
-              >
-                {isPrivacyMode ? <ShieldCheck size={11} color="#3b82f6" /> : <EyeOff size={11} color="rgba(255,255,255,0.3)" />}
-                <span style={{ 
-                  fontSize: '0.6rem', 
-                  fontWeight: 900, 
-                  letterSpacing: '0.5px',
-                  color: isPrivacyMode ? '#3b82f6' : 'rgba(255,255,255,0.4)',
-                  whiteSpace: 'nowrap'
-                }}>
-                   {isPrivacyMode ? 'SOVEREIGN PRIVACY: ACTIVE' : 'INCOGNITO'}
-                </span>
-              </button>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+               <div style={{ display: 'flex', gap: '8px' }}>
+                 <button 
+                   onClick={() => setIsSearchMode(!isSearchMode)}
+                   style={{ 
+                     display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 12px', borderRadius: '12px', 
+                     background: isSearchMode ? 'rgba(0,210,255,0.1)' : 'rgba(255,255,255,0.03)',
+                     border: isSearchMode ? '1px solid rgba(0,210,255,0.3)' : '1px solid var(--glass-border)',
+                     color: isSearchMode ? 'var(--accent-primary)' : 'rgba(255,255,255,0.4)',
+                     fontSize: '0.65rem', fontWeight: 900, cursor: 'pointer', transition: 'all 0.3s'
+                   }}
+                 >
+                   <Globe size={12} /> {isSearchMode ? 'SEARCH: ON' : 'SEARCH'}
+                 </button>
+                 <button 
+                   onClick={() => setIsPrivacyMode(!isPrivacyMode)}
+                   style={{ 
+                     display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 12px', borderRadius: '12px', 
+                     background: isPrivacyMode ? 'rgba(0,255,157,0.1)' : 'rgba(255,255,255,0.03)',
+                     border: isPrivacyMode ? '1px solid rgba(0,255,157,0.3)' : '1px solid var(--glass-border)',
+                     color: isPrivacyMode ? 'var(--accent-beast)' : 'rgba(255,255,255,0.4)',
+                     fontSize: '0.65rem', fontWeight: 900, cursor: 'pointer', transition: 'all 0.3s'
+                   }}
+                 >
+                   {isPrivacyMode ? <ShieldCheck size={12} /> : <EyeOff size={12} />}
+                   {isPrivacyMode ? 'PRIVATE: ACTIVE' : 'PRIVATE'}
+                 </button>
+               </div>
+               <select 
+                 value={responseIntelligence}
+                 onChange={(e) => setResponseIntelligence(e.target.value as any)}
+                 style={{ background: 'transparent', border: 'none', color: 'rgba(255,255,255,0.3)', fontSize: '0.65rem', fontWeight: 900, cursor: 'pointer', outline: 'none' }}
+               >
+                 <option value="auto">AUTO</option>
+                 <option value="concise">CONCISE</option>
+                 <option value="medium">MEDIUM</option>
+                 <option value="long">LONG</option>
+               </select>
             </div>
 
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px', padding: '0 4px' }}>
-              <FileUploader files={files} onFilesChange={setFiles} showButton={false} />
-              
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <span style={{ fontSize: '9px', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '1px', opacity: 0.4 }}>Length:</span>
-                <select 
-                  value={responseIntelligence}
-                  onChange={(e) => setResponseIntelligence(e.target.value as any)}
-                  style={{ 
-                    background: 'rgba(255,255,255,0.05)', 
-                    border: '1px solid rgba(255,255,255,0.1)', 
-                    borderRadius: '6px', 
-                    color: '#fff', 
-                    fontSize: '10px', 
-                    padding: '2px 8px',
-                    outline: 'none',
-                    fontWeight: 800,
-                    cursor: 'pointer'
-                  }}
-                >
-                  <option value="auto">SMART AUTO</option>
-                  <option value="concise">CONCISE (2-3 L)</option>
-                  <option value="medium">MEDIUM (10-15 L)</option>
-                  <option value="long">LONG (DETAILED)</option>
-                </select>
-              </div>
-            </div>
-
-            
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minHeight: '44px' }}>
-              <div style={{ flexShrink: 0 }}><FileUploader files={files} onFilesChange={setFiles} showButton={true} showPreviews={false} /></div>
+            <div style={{ display: 'flex', alignItems: 'flex-end', gap: '12px' }}>
+              <FileUploader files={files} onFilesChange={setFiles} showButton={true} showPreviews={true} />
               
               <textarea 
                 value={input} 
                 onChange={(e) => setInput(e.target.value)} 
-                placeholder="Message JLR AI..." 
-                className="liquid-input" 
+                placeholder="Synchronize command..." 
                 rows={1}
                 style={{ 
                   flex: 1, 
-                  maxHeight: '150px', 
-                  fontSize: '16px', // Prevents iOS zoom
-                  padding: '10px 0',
+                  maxHeight: '120px', 
+                  fontSize: '1rem', 
+                  padding: '8px 0',
                   background: 'transparent',
                   border: 'none',
                   outline: 'none',
-                  color: '#ffffff',
-                  lineHeight: '1.4'
+                  color: '#fff',
+                  lineHeight: '1.5',
+                  resize: 'none'
                 }}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' && !e.shiftKey) {
@@ -570,33 +568,30 @@ Requirements:
                 }}
               />
               
-              <button 
+              <motion.button 
+                whileHover={{ scale: 1.05, background: '#fff' }}
+                whileTap={{ scale: 0.95 }}
                 onClick={handleSendMessage} 
                 disabled={!input.trim() && files.length === 0}
                 style={{ 
-                  width: isMobile ? '40px' : '36px', 
-                  height: isMobile ? '40px' : '36px', 
-                  borderRadius: '50%', 
-                  background: input.trim() ? '#fff' : 'rgba(255,255,255,0.1)', 
+                  width: '42px', 
+                  height: '42px', 
+                  borderRadius: '14px', 
+                  background: input.trim() ? 'var(--accent-primary)' : 'rgba(255,255,255,0.05)', 
                   border: 'none', 
                   color: '#000',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
                   flexShrink: 0,
-                  transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
                   cursor: 'pointer',
-                  transform: input.trim() ? 'scale(1)' : 'scale(0.95)'
+                  transition: 'all 0.3s'
                 }}
               >
-                <ArrowRight size={isMobile ? 20 : 18} strokeWidth={3} />
-              </button>
-
+                <ArrowRight size={20} strokeWidth={3} />
+              </motion.button>
             </div>
           </div>
-          <p style={{ textAlign: 'center', fontSize: '10px', color: 'rgba(255,255,255,0.4)', marginTop: '8px' }}>
-            JLR AI can make mistakes.
-          </p>
         </div>
       </main>
 

@@ -13,9 +13,28 @@ export default function Settings({ isOpen, onClose }: SettingsProps) {
   const [userName, setUserName] = useState('');
   const [isSaved, setIsSaved] = useState(false);
 
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+
   useEffect(() => {
     setUserName(localStorage.getItem('user_name') || 'ravirajjavvadi');
+
+    const handleBeforeInstall = (e: any) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+    };
+
+    window.addEventListener('beforeinstallprompt', handleBeforeInstall);
+    return () => window.removeEventListener('beforeinstallprompt', handleBeforeInstall);
   }, [isOpen]);
+
+  const handleInstall = async () => {
+    if (!deferredPrompt) return;
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    if (outcome === 'accepted') {
+      setDeferredPrompt(null);
+    }
+  };
 
   const saveSettings = () => {
     localStorage.setItem('user_name', userName);
@@ -50,7 +69,7 @@ export default function Settings({ isOpen, onClose }: SettingsProps) {
                 <div style={{ width: '32px', height: '32px', background: 'var(--accent-gradient)', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   <SettingsIcon size={18} color="black" />
                 </div>
-                <h2 style={{ fontSize: '1.25rem', fontWeight: 900, letterSpacing: '1px' }}>IDENTITY</h2>
+                <h2 style={{ fontSize: '1.25rem', fontWeight: 900, letterSpacing: '1px' }}>SYSTEM SETTINGS</h2>
               </div>
               <button onClick={onClose} className="btn-ghost" style={{ padding: '6px' }}><X size={20} /></button>
             </div>
@@ -69,6 +88,35 @@ export default function Settings({ isOpen, onClose }: SettingsProps) {
                   />
                 </div>
               </section>
+
+              {deferredPrompt && (
+                <section>
+                  <label style={{ fontSize: '0.65rem', fontWeight: 900, opacity: 0.5, letterSpacing: '1.5px', marginBottom: '0.8rem', display: 'block' }}>LOCAL DEPLOYMENT</label>
+                  <button 
+                    onClick={handleInstall}
+                    style={{ 
+                      width: '100%', 
+                      padding: '1rem', 
+                      background: 'rgba(59, 130, 246, 0.1)', 
+                      border: '1px solid rgba(59, 130, 246, 0.2)', 
+                      borderRadius: '14px', 
+                      color: '#3b82f6', 
+                      fontSize: '0.8rem', 
+                      fontWeight: 800, 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      justifyContent: 'center', 
+                      gap: '0.75rem',
+                      cursor: 'pointer',
+                      transition: 'all 0.3s'
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(59, 130, 246, 0.15)'}
+                    onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(59, 130, 246, 0.1)'}
+                  >
+                    <Zap size={16} fill="#3b82f6" /> DOWNLOAD AS APP
+                  </button>
+                </section>
+              )}
 
               <div className="hologram-card" style={{ padding: '1rem', background: 'rgba(0, 255, 157, 0.03)', border: '1px solid rgba(0, 255, 157, 0.1)', borderRadius: '12px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.7rem', fontWeight: 900, color: 'var(--accent-beast)', marginBottom: '0.5rem' }}>
