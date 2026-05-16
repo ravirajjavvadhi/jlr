@@ -175,7 +175,7 @@ export async function sendMessage(messages: any[], modelId: string, options: Mes
           if (data === '[DONE]') break;
           try {
             const parsed = JSON.parse(data);
-            let content = parsed.choices?.[0]?.delta?.content || '';
+            const content = parsed.choices?.[0]?.delta?.content || '';
             if (content) {
               fullText += content;
               onToken && onToken(content);
