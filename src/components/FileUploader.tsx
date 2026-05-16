@@ -264,7 +264,7 @@ export default function FileUploader({ onFilesChange, files, showButton = true, 
   const removeFile = (id: string) => onFilesChange(files.filter(f => f.id !== id));
 
   return (
-    <div {...getRootProps()} style={{ width: '100%' }}>
+    <div {...getRootProps()} style={{ width: 'auto', flexShrink: 0 }}>
       <input {...getInputProps()} />
       <AnimatePresence>
         {isProcessing && (

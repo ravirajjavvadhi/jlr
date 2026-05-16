@@ -519,16 +519,16 @@ Requirements:
           </div>
         </div>
 
-        {/* COMMAND CENTER - FIXED VIEWPORT LAYER */}
+        {/* COMMAND CENTER - ABSOLUTE STABILITY LAYER */}
         <div className="command-center" style={{ 
           position: 'fixed',
           bottom: 0,
           left: isMobile ? 0 : (isSidebarOpen ? '280px' : 0),
           right: 0,
-          padding: isMobile ? '1rem' : '20px 2rem 40px 2rem', 
-          background: 'linear-gradient(to top, #010101 80%, transparent)',
-          zIndex: 3000000, // Peak hierarchy
-          pointerEvents: 'none', // Pass-through for the wrapper
+          padding: isMobile ? '12px' : '0 2rem 30px 2rem', 
+          background: 'transparent',
+          zIndex: 3000000, 
+          pointerEvents: 'auto', // Direct interaction enabled
           transition: 'left 0.3s ease'
         }}>
           <div className="input-container" style={{ 
@@ -540,10 +540,11 @@ Requirements:
             display: 'flex',
             flexDirection: 'column',
             gap: '10px',
-            background: 'rgba(5,5,5,0.9)', // Solid-ish background to avoid filter bugs
-            border: '1px solid rgba(255,255,255,0.1)',
-            boxShadow: '0 10px 40px rgba(0,0,0,0.5)',
-            pointerEvents: 'auto' // Re-enable for the actual box
+            background: 'rgba(5,5,5,0.95)', 
+            border: '1px solid rgba(255,255,255,0.15)',
+            boxShadow: '0 10px 50px rgba(0,0,0,0.8)',
+            backdropFilter: 'blur(40px)',
+            pointerEvents: 'auto'
           }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                <div style={{ display: 'flex', gap: '8px' }}>
@@ -576,7 +577,7 @@ Requirements:
                <select 
                  value={responseIntelligence}
                  onChange={(e) => setResponseIntelligence(e.target.value as any)}
-                 style={{ background: 'transparent', border: 'none', color: 'rgba(255,255,255,0.3)', fontSize: '0.65rem', fontWeight: 900, cursor: 'pointer', outline: 'none' }}
+                 style={{ background: 'transparent', border: 'none', color: 'rgba(255,255,255,0.5)', fontSize: '0.65rem', fontWeight: 900, cursor: 'pointer', outline: 'none' }}
                >
                  <option value="auto">AUTO</option>
                  <option value="concise">CONCISE</option>
@@ -591,6 +592,7 @@ Requirements:
                 value={input} 
                 onChange={(e) => setInput(e.target.value)} 
                 placeholder="Synchronize command..." 
+                autoFocus
                 rows={1}
                 id="chat-input-sovereign"
                 style={{ 
@@ -604,7 +606,8 @@ Requirements:
                   color: '#fff',
                   lineHeight: '1.5',
                   resize: 'none',
-                  pointerEvents: 'auto'
+                  pointerEvents: 'auto',
+                  cursor: 'text'
                 }}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' && !e.shiftKey) {
@@ -621,7 +624,7 @@ Requirements:
                 style={{ 
                   background: 'transparent', 
                   border: 'none', 
-                  color: 'rgba(255,255,255,0.4)', 
+                  color: '#fff', 
                   cursor: 'pointer',
                   display: 'flex',
                   alignItems: 'center',
@@ -629,7 +632,7 @@ Requirements:
                   padding: '8px'
                 }}
               >
-                <ArrowRight size={20} />
+                <ArrowRight size={22} />
               </motion.button>
             </div>
           </div>
@@ -642,9 +645,21 @@ Requirements:
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            style={{ position: 'fixed', inset: 0, zIndex: 4000000, background: 'rgba(0,0,0,0.95)', backdropFilter: 'blur(20px)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+            style={{ 
+              position: 'fixed', 
+              inset: 0, 
+              zIndex: 5000000, 
+              background: 'rgba(0,0,0,0.95)', 
+              backdropFilter: 'blur(20px)', 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'center',
+              padding: '20px' 
+            }}
           >
-            <AuthScreen onClose={() => setShowAuthModal(false)} />
+            <div style={{ width: '100%', maxWidth: '500px', maxHeight: '95vh', overflowY: 'auto', padding: '10px' }}>
+              <AuthScreen onClose={() => setShowAuthModal(false)} />
+            </div>
           </motion.div>
         )}
       </AnimatePresence>

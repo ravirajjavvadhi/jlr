@@ -95,40 +95,40 @@ export default function AuthScreen({ onClose }: { onClose?: () => void }) {
           boxShadow: '0 80px 150px rgba(0,0,0,0.9), inset 0 0 20px rgba(191, 149, 63, 0.05)'
         }} />
 
-        <div style={{ textAlign: 'center', marginBottom: '3rem', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-          <RotatingBeast size={80} className="mb-6" />
+        <div style={{ textAlign: 'center', marginBottom: isMobile ? '1.5rem' : '2.5rem', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+          <RotatingBeast size={isMobile ? 50 : 70} className="mb-4" />
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.5 }}
           >
-            <h1 className="text-gold" style={{ fontSize: isMobile ? '2.5rem' : '4rem', fontWeight: 900, marginBottom: '0.2rem', letterSpacing: '4px', lineHeight: 1 }}>
+            <h1 className="text-gold" style={{ fontSize: isMobile ? '2rem' : '3.5rem', fontWeight: 900, marginBottom: '0.1rem', letterSpacing: '4px', lineHeight: 1 }}>
               JLR AI
             </h1>
             <h2 style={{ 
               fontFamily: 'Montserrat', 
-              fontSize: '0.7rem', 
+              fontSize: '0.6rem', 
               fontWeight: 900, 
-              letterSpacing: '12px', 
-              color: 'rgba(191,149,63,0.9)', 
+              letterSpacing: '8px', 
+              color: 'rgba(191,149,63,0.8)', 
               textTransform: 'uppercase',
-              marginTop: '0.5rem'
+              marginTop: '0.25rem'
             }}>
               SUPREMACY
             </h2>
           </motion.div>
           
           <div style={{ 
-            width: '80px', 
-            height: '2px', 
+            width: '60px', 
+            height: '1px', 
             background: 'linear-gradient(to right, transparent, var(--gold-mid), transparent)', 
-            margin: '2rem auto', 
-            opacity: 0.6 
+            margin: isMobile ? '1rem auto' : '1.5rem auto', 
+            opacity: 0.4 
           }} />
         </div>
 
         {error && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={{ padding: '1rem', background: 'rgba(255, 62, 62, 0.05)', border: '1px solid rgba(255, 62, 62, 0.2)', borderRadius: '14px', color: '#ff3e3e', fontSize: '0.7rem', fontWeight: 800, marginBottom: '2.5rem', textAlign: 'center', letterSpacing: '1px' }}>
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={{ padding: '0.75rem', background: 'rgba(255, 62, 62, 0.05)', border: '1px solid rgba(255, 62, 62, 0.2)', borderRadius: '12px', color: '#ff3e3e', fontSize: '0.65rem', fontWeight: 800, marginBottom: '1.5rem', textAlign: 'center' }}>
             {error.toUpperCase()}
           </motion.div>
         )}
