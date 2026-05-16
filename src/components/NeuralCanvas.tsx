@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Download, Sparkles, Loader2, Maximize2, X, RefreshCw, Wand2, Layers, CheckCircle2 } from 'lucide-react';
+import { Download, Sparkles, Loader2, Maximize2, X, RefreshCw, Wand2, Layers, CheckCircle2, AlertTriangle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface NeuralCanvasProps {
@@ -9,22 +9,36 @@ interface NeuralCanvasProps {
   userId?: string;
 }
 
-type Phase = 'architecting' | 'rendering' | 'ranking' | 'done' | 'error';
+type Phase = 'architecting' | 'rendering' | 'done' | 'error';
 
 export default function NeuralCanvas({ prompt, userId }: NeuralCanvasProps) {
   const [architecture, setArchitecture] = useState<any>(null);
   const [phase, setPhase] = useState<Phase>('architecting');
   const [selectedSeed, setSelectedSeed] = useState<number | null>(null);
   const [loadedImages, setLoadedImages] = useState<Set<number>>(new Set());
+  const [failedImages, setFailedImages] = useState<Set<number>>(new Set());
   const [isFullScreen, setIsFullScreen] = useState(false);
   const [fullScreenUrl, setFullScreenUrl] = useState('');
   const [regenerateCount, setRegenerateCount] = useState(0);
   const hasFetched = useRef(false);
+  
+  // Resilient Phase Guard: Force 'done' if rendering takes too long
+  useEffect(() => {
+    if (phase === 'rendering') {
+      const timer = setTimeout(() => {
+        if (loadedImages.size > 0 || failedImages.size > 0) {
+          setPhase('done');
+        }
+      }, 45000); // 45s max wait
+      return () => clearTimeout(timer);
+    }
+  }, [phase, loadedImages.size, failedImages.size]);
 
   const performArchitecture = async () => {
     setPhase('architecting');
     setArchitecture(null);
     setLoadedImages(new Set());
+    setFailedImages(new Set());
     setSelectedSeed(null);
 
     try {
@@ -36,16 +50,21 @@ export default function NeuralCanvas({ prompt, userId }: NeuralCanvasProps) {
 
       if (!res.ok) throw new Error('Architect API failed');
       const data = await res.json();
+      
+      // OPTIMIZATON: Use 3 high-quality variants instead of 4 to reduce server load/latency
+      if (data.seeds && data.seeds.length > 3) {
+        data.seeds = data.seeds.slice(0, 3);
+      }
+      
       setArchitecture(data);
       setPhase('rendering');
     } catch (e) {
       console.error('[NeuralCanvas] Architecture failed:', e);
-      // Failsafe architecture
       setArchitecture({
-        enhanced: `${prompt}, cinematic, masterpiece, 8k`,
+        enhanced: `${prompt}, cinematic masterpiece, 8k, realistic`,
         negative: "blurry, low quality",
         style: "Standard",
-        seeds: [123, 456, 789, 101]
+        seeds: [Date.now(), Date.now() + 1, Date.now() + 2]
       });
       setPhase('rendering');
     }
@@ -66,9 +85,26 @@ export default function NeuralCanvas({ prompt, userId }: NeuralCanvasProps) {
     setLoadedImages(prev => {
       const next = new Set(prev);
       next.add(seed);
-      // Auto-select first loaded image as "Best Choice" initially
       if (next.size === 1) setSelectedSeed(seed);
-      if (next.size === architecture?.seeds.length) setPhase('done');
+      
+      const totalExpected = architecture?.seeds?.length || 3;
+      if (next.size + failedImages.size >= totalExpected) {
+        setPhase('done');
+      }
+      return next;
+    });
+  };
+
+  const handleImageError = (seed: number) => {
+    setFailedImages(prev => {
+      const next = new Set(prev);
+      next.add(seed);
+      
+      const totalExpected = architecture?.seeds?.length || 3;
+      if (next.size + loadedImages.size >= totalExpected) {
+        if (loadedImages.size > 0) setPhase('done');
+        else setPhase('error');
+      }
       return next;
     });
   };
@@ -77,7 +113,8 @@ export default function NeuralCanvas({ prompt, userId }: NeuralCanvasProps) {
     if (!architecture) return '';
     const encodedPrompt = encodeURIComponent(architecture.enhanced);
     const encodedNegative = encodeURIComponent(architecture.negative);
-    return `https://image.pollinations.ai/prompt/${encodedPrompt}?width=1024&height=1024&nologo=true&seed=${seed}&model=flux&negative=${encodedNegative}`;
+    // OPTIMIZATION: Use 768x768 for significantly faster generation while maintaining HD quality
+    return `https://image.pollinations.ai/prompt/${encodedPrompt}?width=768&height=768&nologo=true&seed=${seed}&model=flux&negative=${encodedNegative}`;
   };
 
   const handleDownload = async (url: string) => {
@@ -87,7 +124,7 @@ export default function NeuralCanvas({ prompt, userId }: NeuralCanvasProps) {
       const blobUrl = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = blobUrl;
-      a.download = `jlr-ai-masterpiece-${Date.now()}.jpg`;
+      a.download = `jlr-ai-canvas-${Date.now()}.jpg`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -102,70 +139,64 @@ export default function NeuralCanvas({ prompt, userId }: NeuralCanvasProps) {
   return (
     <>
       <motion.div
-        initial={{ opacity: 0, y: 30 }}
-        animate={{ opacity: 1, y: 0 }}
+        initial={{ opacity: 0, scale: 0.98 }}
+        animate={{ opacity: 1, scale: 1 }}
         style={{
-          marginTop: '20px',
-          borderRadius: '28px',
-          background: 'linear-gradient(135deg, #0a0a0c 0%, #050507 100%)',
+          marginTop: '16px',
+          borderRadius: '24px',
+          background: 'rgba(10,10,12,0.95)',
+          backdropFilter: 'blur(10px)',
           border: '1px solid rgba(255,255,255,0.08)',
-          maxWidth: '600px',
+          maxWidth: '540px',
           width: '100%',
           overflow: 'hidden',
-          boxShadow: '0 40px 80px -20px rgba(0,0,0,0.8), 0 0 0 1px rgba(255,255,255,0.02)',
+          boxShadow: '0 25px 50px -12px rgba(0,0,0,0.5)',
         }}
       >
-        {/* Sovereign Header 4.0 */}
+        {/* Header */}
         <div style={{
-          padding: '18px 20px',
+          padding: '12px 16px',
           borderBottom: '1px solid rgba(255,255,255,0.05)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between'
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <div style={{
-              width: '32px', height: '32px', borderRadius: '10px',
+              width: '24px', height: '24px', borderRadius: '6px',
               background: 'linear-gradient(135deg, #10b981, #059669)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              boxShadow: '0 0 15px rgba(16,185,129,0.3)'
+              display: 'flex', alignItems: 'center', justifyContent: 'center'
             }}>
-              <Wand2 size={16} color="black" strokeWidth={2.5} />
+              <Wand2 size={12} color="black" />
             </div>
-            <div>
-              <p style={{ margin: 0, fontSize: '0.65rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.15em', color: '#fff' }}>
-                Sovereign Architect <span style={{ color: '#10b981' }}>// v4.0</span>
-              </p>
-              <p style={{ margin: 0, fontSize: '0.5rem', color: 'rgba(255,255,255,0.3)', fontWeight: 700, letterSpacing: '1px' }}>
-                FLUX ENGINE // INTELLIGENCE LAYER ACTIVE
-              </p>
-            </div>
+            <span style={{ fontSize: '0.6rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'rgba(255,255,255,0.6)' }}>
+              Neural Canvas <span style={{ color: '#10b981' }}>// v4.1 Fast</span>
+            </span>
           </div>
           {phase === 'done' && (
              <button
                onClick={() => setRegenerateCount(c => c + 1)}
                style={{
-                 background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)',
-                 borderRadius: '8px', padding: '6px 10px', color: 'rgba(255,255,255,0.5)',
-                 display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer',
-                 fontSize: '0.6rem', fontWeight: 800, transition: 'all 0.2s'
+                 background: 'transparent', border: 'none',
+                 padding: '4px', color: 'rgba(255,255,255,0.3)',
+                 cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px',
+                 fontSize: '0.55rem', fontWeight: 700
                }}
              >
-               <RefreshCw size={12} /> RE-ARCHITECT
+               <RefreshCw size={10} /> RE-GENERATE
              </button>
           )}
         </div>
 
-        <div style={{ padding: '20px' }}>
+        <div style={{ padding: '12px' }}>
           {/* Main Stage */}
           <div style={{
             position: 'relative',
             aspectRatio: '1/1',
-            borderRadius: '20px',
+            borderRadius: '16px',
             overflow: 'hidden',
-            background: '#020202',
-            border: '1px solid rgba(255,255,255,0.06)',
-            boxShadow: 'inset 0 0 40px rgba(0,0,0,0.5)'
+            background: '#000',
+            border: '1px solid rgba(255,255,255,0.05)'
           }}>
             <AnimatePresence>
               {(phase === 'architecting' || phase === 'rendering') && (
@@ -176,34 +207,35 @@ export default function NeuralCanvas({ prompt, userId }: NeuralCanvasProps) {
                   style={{
                     position: 'absolute', inset: 0, zIndex: 10,
                     display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-                    gap: '20px', background: 'radial-gradient(circle at center, rgba(16,185,129,0.08) 0%, #020202 80%)'
+                    gap: '12px', background: '#000'
                   }}
                 >
-                  <div style={{ position: 'relative' }}>
-                    <motion.div 
-                      animate={{ rotate: 360 }}
-                      transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
-                      style={{ width: '80px', height: '80px', borderRadius: '50%', border: '2px solid rgba(16,185,129,0.1)', borderTopColor: '#10b981' }}
-                    />
-                    <Sparkles style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', color: '#10b981' }} size={24} />
-                  </div>
+                  <Loader2 size={24} className="animate-spin" style={{ color: '#10b981' }} />
                   <div style={{ textAlign: 'center' }}>
-                    <p style={{ fontSize: '0.75rem', fontWeight: 900, color: '#10b981', letterSpacing: '2px', textTransform: 'uppercase' }}>
-                      {phase === 'architecting' ? 'Expanding Prompt Intelligence' : 'Synthesizing Quantum Variants'}
+                    <p style={{ fontSize: '0.6rem', fontWeight: 900, color: '#10b981', letterSpacing: '1px', textTransform: 'uppercase' }}>
+                      {phase === 'architecting' ? 'Architecting...' : 'Rendering 3 Variants...'}
                     </p>
-                    <p style={{ fontSize: '0.55rem', color: 'rgba(255,255,255,0.2)', marginTop: '6px', fontWeight: 700 }}>
-                      {phase === 'architecting' ? 'Injecting Cinematic Logic & Skin Morphology...' : 'Processing 4 Parallel Neural Streams...'}
-                    </p>
+                    {loadedImages.size > 0 && phase === 'rendering' && (
+                        <p style={{ fontSize: '0.5rem', color: 'rgba(255,255,255,0.3)', marginTop: '4px' }}>
+                            {loadedImages.size} / {architecture?.seeds.length} READY
+                        </p>
+                    )}
                   </div>
                 </motion.div>
               )}
             </AnimatePresence>
 
-            {/* Hidden parallel loaders for seeds */}
+            {/* Parallel loaders */}
             {architecture && (
               <div style={{ display: 'none' }}>
                 {architecture.seeds.map((seed: number) => (
-                  <img key={seed} src={getPollinationsUrl(seed)} onLoad={() => handleImageLoad(seed)} alt="" />
+                  <img 
+                    key={seed} 
+                    src={getPollinationsUrl(seed)} 
+                    onLoad={() => handleImageLoad(seed)} 
+                    onError={() => handleImageError(seed)}
+                    alt="" 
+                  />
                 ))}
               </div>
             )}
@@ -215,171 +247,95 @@ export default function NeuralCanvas({ prompt, userId }: NeuralCanvasProps) {
                 alt={prompt}
                 style={{
                   width: '100%', height: '100%', objectFit: 'cover',
-                  opacity: phase === 'done' ? 1 : 0.3,
-                  transition: 'opacity 1s ease'
+                  opacity: phase === 'done' ? 1 : 0.4,
+                  transition: 'opacity 0.5s ease',
+                  cursor: 'pointer'
                 }}
                 onClick={() => phase === 'done' && (setFullScreenUrl(currentImageUrl), setIsFullScreen(true))}
               />
             )}
           </div>
 
-          {/* Variant Selector / Image Ranking */}
+          {/* Variant Selector */}
           {architecture && (
-            <div style={{ marginTop: '20px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
-                <Layers size={14} style={{ color: 'rgba(255,255,255,0.3)' }} />
-                <span style={{ fontSize: '0.6rem', fontWeight: 800, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '1px' }}>
-                  Architecture Variants
-                </span>
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px' }}>
-                {architecture.seeds.map((seed: number, idx: number) => {
+            <div style={{ marginTop: '12px', display: 'flex', gap: '8px' }}>
+                {architecture.seeds.map((seed: number) => {
                   const isLoaded = loadedImages.has(seed);
+                  const isFailed = failedImages.has(seed);
                   const isSelected = selectedSeed === seed;
+                  
                   return (
-                    <motion.div
+                    <div
                       key={seed}
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
                       onClick={() => isLoaded && setSelectedSeed(seed)}
                       style={{
-                        aspectRatio: '1/1',
-                        borderRadius: '12px',
+                        width: '50px', height: '50px',
+                        borderRadius: '8px',
                         overflow: 'hidden',
                         background: 'rgba(255,255,255,0.03)',
                         border: isSelected ? '2px solid #10b981' : '1px solid rgba(255,255,255,0.08)',
-                        cursor: isLoaded ? 'pointer' : 'wait',
-                        position: 'relative',
-                        transition: 'all 0.3s'
+                        cursor: isLoaded ? 'pointer' : 'default',
+                        position: 'relative'
                       }}
                     >
                       {isLoaded ? (
                         <img src={getPollinationsUrl(seed)} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="" />
+                      ) : isFailed ? (
+                        <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <AlertTriangle size={12} color="rgba(255,0,0,0.3)" />
+                        </div>
                       ) : (
                         <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                          <Loader2 size={16} className="animate-spin" style={{ color: 'rgba(255,255,255,0.1)' }} />
+                          <Loader2 size={10} className="animate-spin" style={{ color: 'rgba(255,255,255,0.1)' }} />
                         </div>
                       )}
-                      {isSelected && (
-                        <div style={{ position: 'absolute', top: '4px', right: '4px', background: '#10b981', borderRadius: '50%', padding: '2px' }}>
-                          <CheckCircle2 size={10} color="black" strokeWidth={3} />
-                        </div>
-                      )}
-                    </motion.div>
+                    </div>
                   );
                 })}
-              </div>
             </div>
-          )}
-
-          {/* Prompt Intel (Enhanced Prompt Display) */}
-          {architecture?.enhanced && phase === 'done' && (
-            <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: 'auto' }}
-              style={{
-                marginTop: '20px',
-                padding: '14px',
-                background: 'rgba(16,185,129,0.04)',
-                borderRadius: '16px',
-                border: '1px solid rgba(16,185,129,0.1)'
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-                <Sparkles size={12} style={{ color: '#10b981' }} />
-                <span style={{ fontSize: '0.55rem', fontWeight: 900, color: '#10b981', textTransform: 'uppercase', letterSpacing: '1.5px' }}>
-                  Enhanced Architecture Prompt
-                </span>
-              </div>
-              <p style={{
-                fontSize: '0.62rem',
-                color: 'rgba(255,255,255,0.3)',
-                lineHeight: 1.6,
-                margin: 0,
-                fontStyle: 'italic',
-                overflow: 'hidden',
-                display: '-webkit-box',
-                WebkitLineClamp: 3,
-                WebkitBoxOrient: 'vertical' as const
-              }}>
-                {architecture.enhanced}
-              </p>
-            </motion.div>
           )}
 
           {/* Action Footer */}
           {phase === 'done' && (
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '20px' }}>
-               <div style={{ display: 'flex', gap: '10px' }}>
-                  <div style={{ padding: '4px 8px', borderRadius: '6px', background: 'rgba(16,185,129,0.1)', color: '#10b981', fontSize: '0.5rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '1px', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                    <CheckCircle2 size={10} /> Face Optimized
-                  </div>
-                  <div style={{ padding: '4px 8px', borderRadius: '6px', background: 'rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.4)', fontSize: '0.5rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '1px' }}>
-                    Finalizing Rank
-                  </div>
-               </div>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '14px' }}>
+               <p style={{
+                fontSize: '0.55rem', color: 'rgba(255,255,255,0.2)',
+                maxWidth: '60%', overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis'
+               }}>
+                 &ldquo;{architecture?.enhanced}&rdquo;
+               </p>
                <button
                   onClick={() => handleDownload(currentImageUrl)}
                   style={{
                     background: '#fff', color: '#000', border: 'none', borderRadius: '50px',
-                    padding: '8px 20px', fontSize: '0.65rem', fontWeight: 900, cursor: 'pointer',
-                    display: 'flex', alignItems: 'center', gap: '8px', transition: 'all 0.2s',
-                    boxShadow: '0 10px 20px rgba(255,255,255,0.1)'
+                    padding: '6px 14px', fontSize: '0.6rem', fontWeight: 900, cursor: 'pointer',
+                    display: 'flex', alignItems: 'center', gap: '6px'
                   }}
                >
-                 <Download size={14} /> SAVE MASTERPIECE
+                 <Download size={12} /> SAVE
                </button>
             </div>
           )}
         </div>
       </motion.div>
 
-      {/* Sovereign Modal 4.0 */}
+      {/* Basic Fullscreen */}
       <AnimatePresence>
         {isFullScreen && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
+          <div 
             style={{
               position: 'fixed', inset: 0, zIndex: 99999,
-              background: 'rgba(0,0,0,0.98)', backdropFilter: 'blur(30px)',
+              background: 'rgba(0,0,0,0.98)',
               display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px'
             }}
             onClick={() => setIsFullScreen(false)}
           >
-            <button 
-              onClick={() => setIsFullScreen(false)}
-              style={{ position: 'absolute', top: '30px', right: '30px', color: '#fff', background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '50%', width: '44px', height: '44px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-            >
-              <X size={24} />
-            </button>
-
-            <div style={{ maxWidth: '900px', width: '100%', display: 'flex', flexDirection: 'column', gap: '30px', alignItems: 'center' }}>
-              <motion.img
-                initial={{ scale: 0.9, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                src={fullScreenUrl}
-                style={{
-                  maxWidth: '100%', maxHeight: '75vh', borderRadius: '24px',
-                  boxShadow: '0 0 100px rgba(16,185,129,0.15)',
-                  border: '1px solid rgba(255,255,255,0.1)'
-                }}
-                onClick={(e) => e.stopPropagation()}
-              />
-              <div style={{ textAlign: 'center' }}>
-                 <p style={{ color: 'rgba(255,255,255,0.3)', fontSize: '0.8rem', fontStyle: 'italic', maxWidth: '700px', margin: '0 auto 20px auto', lineHeight: 1.6 }}>
-                   &ldquo;{architecture?.enhanced}&rdquo;
-                 </p>
-                 <button 
-                   onClick={(e) => { e.stopPropagation(); handleDownload(fullScreenUrl); }}
-                   style={{ background: '#fff', color: '#000', border: 'none', borderRadius: '50px', padding: '14px 40px', fontSize: '0.85rem', fontWeight: 900, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px', margin: '0 auto', textTransform: 'uppercase', letterSpacing: '2px' }}
-                 >
-                   <Download size={20} /> ARCHIVE MASTERPIECE
-                 </button>
-              </div>
+            <div style={{ position: 'relative', maxWidth: '1000px', width: '100%' }}>
+                <button style={{ position: 'absolute', top: '-40px', right: 0, color: '#fff', background: 'none', border: 'none', cursor: 'pointer' }}><X size={24} /></button>
+                <img src={fullScreenUrl} style={{ width: '100%', borderRadius: '16px' }} alt="" />
+                <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.7rem', marginTop: '16px' }}>{architecture?.enhanced}</p>
             </div>
-          </motion.div>
+          </div>
         )}
       </AnimatePresence>
     </>
