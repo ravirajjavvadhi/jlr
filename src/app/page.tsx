@@ -513,7 +513,8 @@ Requirements:
           right: 0, 
           padding: isMobile ? '1rem 0.75rem 2rem 0.75rem' : '2rem', 
           background: 'linear-gradient(to top, #010101 60%, transparent)',
-          zIndex: 1000 
+          zIndex: 99999,
+          pointerEvents: 'auto'
         }}>
           <div className="input-container hologram-card" style={{ 
             margin: '0 auto', 

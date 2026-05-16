@@ -91,10 +91,12 @@
 
 input, textarea, [contenteditable="true"] {
   cursor: text;
+  pointer-events: auto !important;
 }
 
 button, a, .clickable, .sidebar-item, select, [role="button"] {
   cursor: pointer !important;
+  pointer-events: auto !important;
 }
 
 body {
@@ -257,9 +259,10 @@ body::before {
   background: linear-gradient(to top, rgba(2,2,2,0.98), rgba(2,2,2,0.8), transparent);
   backdrop-filter: blur(20px);
   padding: 1.5rem;
-  z-index: 50;
+  z-index: 9999 !important;
   display: flex;
   justify-content: center;
+  pointer-events: auto !important;
 }
 
 .input-container {
