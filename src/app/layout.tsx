@@ -20,7 +20,7 @@ export const metadata: Metadata = {
     siteName: "JLR AI SUPREMACY",
     images: [
       {
-        url: "https://jlr-omega.vercel.app/meta-preview.png",
+        url: "https://jlr-omega.vercel.app/og-image.png", // Switched to lighter asset (65KB) for WhatsApp Status
         width: 1200,
         height: 630,
         alt: "JLR AI SUPREMACY Preview",
@@ -34,7 +34,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "JLR AI SUPREMACY | NEURAL COGNITION",
     description: "The peak of futuristic AI intelligence. Experience cinematic UI and absolute multimedia sovereignty.",
-    images: ["https://jlr-omega.vercel.app/meta-preview.png"],
+    images: ["https://jlr-omega.vercel.app/og-image.png"],
   },
   appleWebApp: {
     capable: true,
@@ -57,8 +57,13 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="en" prefix="og: http://ogp.me/ns#" suppressHydrationWarning>
       <head>
+        {/* Absolute Redundancy for WhatsApp Status/Telegram/LinkedIn */}
+        <meta property="og:image:secure_url" content="https://jlr-omega.vercel.app/og-image.png" />
+        <meta itemProp="image" content="https://jlr-omega.vercel.app/og-image.png" />
+        <link rel="image_src" href="https://jlr-omega.vercel.app/og-image.png" />
+        
         <link rel="icon" href="/lion-core.png?v=2" />
         <link rel="apple-touch-icon" href="/lion-core.png?v=2" />
         <link rel="shortcut icon" href="/lion-core.png?v=2" />
