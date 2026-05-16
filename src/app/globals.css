@@ -43,6 +43,26 @@
   50% { opacity: 1; transform: scale(1.02); filter: brightness(1.3); }
 }
 
+@keyframes rotate-clockwise {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes rotate-counter {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(-360deg); }
+}
+
+.beast-rotate-clockwise {
+  animation: rotate-clockwise 20s linear infinite;
+  will-change: transform;
+}
+
+.beast-rotate-counter {
+  animation: rotate-counter 25s linear infinite;
+  will-change: transform;
+}
+
 .scanlines {
   position: absolute;
   top: 0;

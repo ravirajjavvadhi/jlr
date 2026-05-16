@@ -6,9 +6,8 @@ export default function RotatingBeast({ size = 60, className = "" }: { size?: nu
   return (
     <div className={`relative flex items-center justify-center ${className}`} style={{ width: size, height: size }}>
       {/* Outer Rotating Halo */}
-      <motion.div
-        animate={{ rotate: 360 }}
-        transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
+      <div
+        className="beast-rotate-clockwise"
         style={{
           position: 'absolute',
           inset: -4,
@@ -20,9 +19,8 @@ export default function RotatingBeast({ size = 60, className = "" }: { size?: nu
       />
       
       {/* Inner Rotating Lion Core */}
-      <motion.div
-        animate={{ rotate: -360 }}
-        transition={{ duration: 25, repeat: Infinity, ease: "linear" }}
+      <div
+        className="beast-rotate-counter"
         style={{
           width: '100%',
           height: '100%',
@@ -31,8 +29,9 @@ export default function RotatingBeast({ size = 60, className = "" }: { size?: nu
           justifyContent: 'center',
           position: 'relative',
           zIndex: 2,
-          mixBlendMode: 'screen', // Makes the black background transparent
-          clipPath: 'circle(48%)', // Ensures no square edge artifacts remain
+          mixBlendMode: 'screen', 
+          clipPath: 'circle(48%)',
+          willChange: 'transform'
         }}
       >
         <img 
@@ -42,10 +41,10 @@ export default function RotatingBeast({ size = 60, className = "" }: { size?: nu
             width: '100%', 
             height: '100%', 
             objectFit: 'contain',
-            imageRendering: 'crisp-edges', // Keep it sharp as requested
+            imageRendering: 'auto', 
           }} 
         />
-      </motion.div>
+      </div>
 
       {/* Static Glow Core */}
       <div style={{

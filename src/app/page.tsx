@@ -138,6 +138,18 @@ export default function AppMain() {
     } 
   }, []);
 
+  // ─── VIEWPORT LOCK (Prevent Keyboard Squish) ──────────────────────────────
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const lockHeight = () => {
+      const vh = window.innerHeight * 0.01;
+      document.documentElement.style.setProperty('--vh', `${vh}px`);
+    };
+    lockHeight();
+    window.addEventListener('resize', lockHeight);
+    return () => window.removeEventListener('resize', lockHeight);
+  }, []);
+
   useEffect(() => { 
     scrollToBottom(localMessages.length > 0 && !isLoading); 
   }, [localMessages, scrollToBottom, isLoading]);
@@ -270,13 +282,13 @@ Requirements:
   };
 
   return (
-    <div className="app-container" suppressHydrationWarning style={{ 
-      position: 'fixed', 
-      inset: 0, 
-      overflow: 'hidden', 
-      height: '100dvh', 
+    <div className="app-container" style={{ 
       display: 'flex', 
-      background: '#010101' 
+      height: 'calc(var(--vh, 1vh) * 100)', 
+      width: '100vw', 
+      background: '#000', 
+      overflow: 'hidden',
+      position: 'relative'
     }}>
       {/* Neural Omniscience Background Engine */}
       <NeuralCanvas3D />
@@ -366,9 +378,13 @@ Requirements:
           initial={{ y: -20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           style={{ 
-            display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: isMobile ? '0.75rem 1rem' : '1rem 2rem', 
-            background: 'rgba(5,5,5,0.7)', backdropFilter: 'blur(10px)', borderBottom: '1px solid var(--glass-border)', zIndex: 1000,
-            willChange: 'transform, opacity' // Hardware acceleration
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between', 
+            height: isMobile ? '56px' : '70px',
+            padding: '0 1rem', 
+            background: 'rgba(5,5,5,0.8)', 
+            borderBottom: '1px solid var(--glass-border)', 
+            zIndex: 1000,
+            willChange: 'transform, opacity'
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>

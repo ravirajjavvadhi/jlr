@@ -18,8 +18,8 @@ export default function NeuralCanvas3D() {
 
     let animationFrameId: number;
     let particles: Particle[] = [];
-    const particleCount = isMobile ? 25 : 60;
-    const connectionDistance = isMobile ? 0 : 120; // Disable connections on mobile
+    const particleCount = isMobile ? 10 : 40;
+    const connectionDistance = isMobile ? 0 : 100; // Total connection purge on mobile
     const mouse = { x: 0, y: 0, radius: 150 };
 
     class Particle {
