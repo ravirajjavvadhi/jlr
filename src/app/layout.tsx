@@ -57,6 +57,11 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
+      <head>
+        <link rel="icon" href="/lion-core.png?v=2" />
+        <link rel="apple-touch-icon" href="/lion-core.png?v=2" />
+        <link rel="shortcut icon" href="/lion-core.png?v=2" />
+      </head>
       <body className={inter.className}>
         <AuthProvider>
           <div className="neural-overlay" />

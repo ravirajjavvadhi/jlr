@@ -1,37 +1,26 @@
 {
-  "name": "JLR AI - Power Edition",
+  "name": "JLR AI SUPREMACY | NEURAL COGNITION",
   "short_name": "JLR AI",
-  "description": "Supreme AI performance at your command.",
+  "description": "Tactical high-end AI power center.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#050505",
   "theme_color": "#050505",
   "icons": [
     {
-      "src": "/icons/icon-192x192.png",
-      "sizes": "192x192",
-      "type": "image/png"
-    },
-    {
-      "src": "/icons/icon-512x512.png",
+      "src": "/lion-core.png",
       "sizes": "512x512",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any maskable"
     }
   ],
   "shortcuts": [
     {
-      "name": "Neural Snipe",
-      "short_name": "Snipe",
-      "description": "Instant trigger for Neural Island overlay",
+      "name": "Neural Sync",
+      "short_name": "Sync",
+      "description": "Initialize Neural Session",
       "url": "/",
-      "icons": [{ "src": "/icons/icon-192x192.png", "sizes": "192x192" }]
-    },
-    {
-      "name": "Command Center",
-      "short_name": "Admin",
-      "description": "Access nodal management dashboard",
-      "url": "/admin",
-      "icons": [{ "src": "/icons/icon-192x192.png", "sizes": "192x192" }]
+      "icons": [{ "src": "/lion-core.png", "sizes": "512x512" }]
     }
   ]
 }

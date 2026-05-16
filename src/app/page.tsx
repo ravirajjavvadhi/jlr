@@ -409,19 +409,10 @@ Requirements:
           <div className="chat-container" style={{ width: '100%', maxWidth: '800px', paddingBottom: '160px' }}>
             {localMessages.length === 0 ? (
               <div style={{ height: '50vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '2rem' }}>
-                <motion.div 
-                  animate={{ 
-                    rotate: [0, 90, 180, 270, 360],
-                    boxShadow: ['0 0 20px rgba(0,210,255,0.2)', '0 0 50px rgba(0,210,255,0.4)', '0 0 20px rgba(0,210,255,0.2)']
-                  }} 
-                  transition={{ duration: 10, repeat: Infinity, ease: 'linear' }}
-                  style={{ width: '100px', height: '100px', borderRadius: '30px', background: 'var(--accent-gradient)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                >
-                  <Zap size={50} fill="black" />
-                </motion.div>
+                <RotatingBeast size={isMobile ? 120 : 180} />
                 <div style={{ textAlign: 'center' }}>
-                  <h1 style={{ fontSize: isMobile ? '1.5rem' : '2.5rem', fontWeight: 900, letterSpacing: '8px', textTransform: 'uppercase', marginBottom: '0.5rem' }}>SYSTEM ONLINE</h1>
-                  <p style={{ fontSize: '0.75rem', fontWeight: 700, opacity: 0.4, letterSpacing: '4px' }}>AWAITING COMMANDS</p>
+                  <h1 style={{ fontSize: isMobile ? '1.8rem' : '3.5rem', fontWeight: 900, letterSpacing: '12px', textTransform: 'uppercase', marginBottom: '0.5rem', background: 'var(--gold-gradient)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>NEURAL SYNC</h1>
+                  <p style={{ fontSize: '0.8rem', fontWeight: 900, opacity: 0.6, letterSpacing: '6px', color: 'var(--accent-primary)' }}>SUPREMACY ACTIVE // AWAITING COMMANDS</p>
                 </div>
               </div>
             ) : (
@@ -452,7 +443,7 @@ Requirements:
                       marginTop: '4px',
                       boxShadow: msg.role === 'assistant' ? '0 0 15px rgba(0, 210, 255, 0.4)' : 'none'
                     }}>
-                      {msg.role === 'assistant' ? <Zap size={18} fill="black" /> : <User size={18} />}
+                      {msg.role === 'assistant' ? <RotatingBeast size={28} /> : <User size={18} />}
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ fontSize: '0.65rem', fontWeight: 900, opacity: 0.3, letterSpacing: '2px', textTransform: 'uppercase', marginBottom: '0.75rem' }}>
