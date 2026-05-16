@@ -116,6 +116,44 @@ export async function sendMessage(messages: any[], modelId: string, options: Mes
   }
 
   try {
+    let videoUri: string | null = null;
+
+    // [OMNI-UPLOAD]: Handle large videos via client-side resumable upload to bypass Vercel 413
+    if (options.videoFile) {
+      console.log('[OMNI-UPLOAD] Bypassing Vercel 413 limit via resumable push...');
+      try {
+        const initRes = await fetch('/api/video/init-upload', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            filename: options.videoFile.name,
+            mimeType: options.videoFile.type,
+            userId: userId
+          })
+        });
+        const { uploadUrl } = await initRes.json();
+        
+        if (!uploadUrl) throw new Error('Failed to get sovereign upload link');
+
+        // Direct push to Google
+        const pushRes = await fetch(uploadUrl, {
+          method: 'POST',
+          headers: {
+            'X-Goog-Upload-Offset': '0',
+            'X-Goog-Upload-Command': 'upload, finalize'
+          },
+          body: options.videoFile
+        });
+        
+        const pushData = await pushRes.json();
+        videoUri = pushData.file?.uri;
+        console.log('[OMNI-UPLOAD] Direct push successful:', videoUri);
+      } catch (err) {
+        console.error('[OMNI-UPLOAD] Failure:', err);
+        throw new Error('Video intelligence link failed. File may be too large for fallback nodes.');
+      }
+    }
+
     const payload: any = {
       model: finalModelId,
       messages: [
@@ -126,25 +164,14 @@ export async function sendMessage(messages: any[], modelId: string, options: Mes
       fileContext: fileContext,
       userId: userId,
       isSearchMode: options.isSearchMode,
-      isPrivacyMode: options.isPrivacyMode
+      isPrivacyMode: options.isPrivacyMode,
+      videoUri: videoUri // Send the URI instead of the binary file
     };
-
-    let body: any = JSON.stringify(payload);
-    let headers: any = { 'Content-Type': 'application/json' };
-
-    // [OMNI-MODE]: If video is present, use FormData for huge payload stability
-    if (options.videoFile) {
-      const formData = new FormData();
-      formData.append('video', options.videoFile);
-      formData.append('payload', JSON.stringify(payload));
-      body = formData;
-      headers = {}; // Let browser set boundary
-    }
 
     const response = await fetch('/api/chat', {
       method: 'POST',
-      headers: headers,
-      body: body,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
       signal: options.signal,
     });
 

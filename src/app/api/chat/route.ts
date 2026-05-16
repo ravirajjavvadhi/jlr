@@ -225,7 +225,7 @@ export async function POST(req: NextRequest) {
       rawBody = await req.json();
     }
 
-    const { messages, model, provider, fileContext, userId, isSearchMode, isPrivacyMode } = rawBody;
+    const { messages, model, provider, fileContext, userId, isSearchMode, isPrivacyMode, videoUri } = rawBody;
 
 
     // Build current IST date string
@@ -336,14 +336,23 @@ You are JLR AI (Supreme Edition). Your signature is absolute technical authority
         else finalMessages.unshift({ role: 'system', content });
 
         // [OMNI-MODE VIDEO PIPELINE]
-        if (videoFile && geminiKeys.length > 0) {
+        if ((videoUri || videoFile) && geminiKeys.length > 0) {
            const apiKey = geminiKeys[0];
            const decoder = new TextDecoder();
            controller.enqueue(encoder.encode(`data: ${JSON.stringify({ choices: [{ delta: { content: '🎬 *JLR Omni-Vision Engine Initializing. Processing Video Data...*\n\n' } }] })}\n\n`));
            
            try {
-             const fileInfo = await uploadToGemini(videoFile, videoFile.type, videoFile.name, apiKey);
-             await waitForFileActive(fileInfo.uri, apiKey);
+             let finalVideoUri = videoUri;
+             
+             // Fallback for direct binary uploads if any
+             if (!finalVideoUri && videoFile) {
+               const fileInfo = await uploadToGemini(videoFile, videoFile.type, videoFile.name, apiKey);
+               finalVideoUri = fileInfo.uri;
+             }
+
+             if (!finalVideoUri) throw new Error('No video data found');
+
+             await waitForFileActive(finalVideoUri, apiKey);
              
              const geminiRes = await fetch(`${GEMINI_BASE_URL}/models/gemini-1.5-pro:streamGenerateContent?alt=sse&key=${apiKey}`, {
                method: 'POST',
@@ -351,14 +360,15 @@ You are JLR AI (Supreme Edition). Your signature is absolute technical authority
                body: JSON.stringify({
                  contents: [{
                    parts: [
-                     ...finalMessages.map(m => ({ role: m.role === 'assistant' ? 'model' : 'user', text: m.content })),
-                     { fileData: { mimeType: videoFile.type, fileUri: fileInfo.uri } }
+                     ...finalMessages.filter(m => m.role !== 'system').map(m => ({ role: m.role === 'assistant' ? 'model' : 'user', text: m.content })),
+                     { fileData: { mimeType: 'video/mp4', fileUri: finalVideoUri } }
                    ]
                  }],
                  systemInstruction: { parts: [{ text: content }] },
                  generationConfig: { temperature: 0.2, maxOutputTokens: 8192 }
                })
              });
+
 
              if (geminiRes.ok) {
                const reader = geminiRes.body!.getReader();
