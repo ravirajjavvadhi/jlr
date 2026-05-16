@@ -20,10 +20,10 @@ export const metadata: Metadata = {
     siteName: "JLR AI SUPREMACY",
     images: [
       {
-        url: "/lion-core.png",
+        url: "/meta-preview.png",
         width: 1200,
         height: 630,
-        alt: "JLR AI Supremacy Preview",
+        alt: "JLR AI SUPREMACY Preview",
       },
     ],
     locale: "en_US",
@@ -33,7 +33,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "JLR AI SUPREMACY | NEURAL COGNITION",
     description: "The peak of futuristic AI intelligence.",
-    images: ["/beast-logo.png"],
+    images: ["/meta-preview.png"],
   },
   appleWebApp: {
     capable: true,
