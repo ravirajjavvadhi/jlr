@@ -311,10 +311,10 @@ export default function NeuralCanvas({ prompt, userId }: NeuralCanvasProps) {
           {phase === 'done' && (
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '20px' }}>
                <div style={{ display: 'flex', gap: '10px' }}>
-                  <div style={{ px: '8px', py: '4px', borderRadius: '6px', background: 'rgba(16,185,129,0.1)', color: '#10b981', fontSize: '0.5rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '1px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <div style={{ padding: '4px 8px', borderRadius: '6px', background: 'rgba(16,185,129,0.1)', color: '#10b981', fontSize: '0.5rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '1px', display: 'flex', alignItems: 'center', gap: '4px' }}>
                     <CheckCircle2 size={10} /> Face Optimized
                   </div>
-                  <div style={{ px: '8px', py: '4px', borderRadius: '6px', background: 'rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.4)', fontSize: '0.5rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '1px' }}>
+                  <div style={{ padding: '4px 8px', borderRadius: '6px', background: 'rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.4)', fontSize: '0.5rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '1px' }}>
                     Finalizing Rank
                   </div>
                </div>
