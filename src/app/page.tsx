@@ -21,6 +21,7 @@ import NeuralCanvas from '@/components/NeuralCanvas';
 import SovereignCinematic from '@/components/SovereignCinematic';
 import Sidebar from '@/components/Sidebar';
 import NeuralCanvas3D from '@/components/NeuralCanvas3D';
+import RotatingBeast from '@/components/RotatingBeast';
 
 const CodeBlock = ({ inline, className, children, ...props }: any) => {
   const [copied, setCopied] = useState(false);
@@ -365,14 +366,11 @@ Requirements:
               <PanelLeft size={20} />
             </button>
             {!isMobile && (
-              <div style={{ display: 'flex', gap: '1.5rem', marginLeft: '2rem' }}>
+              <div style={{ display: 'flex', gap: '2rem', marginLeft: '2rem', alignItems: 'center' }}>
+                <RotatingBeast size={32} />
                 <div style={{ display: 'flex', flexDirection: 'column' }}>
-                  <span style={{ fontSize: '0.55rem', fontWeight: 900, color: 'var(--accent-primary)', letterSpacing: '1px' }}>CORE STATUS</span>
-                  <span style={{ fontSize: '0.7rem', fontWeight: 800 }}>SOVEREIGN: ACTIVE</span>
-                </div>
-                <div style={{ display: 'flex', flexDirection: 'column' }}>
-                  <span style={{ fontSize: '0.55rem', fontWeight: 900, color: 'var(--accent-beast)', letterSpacing: '1px' }}>NEURAL SYNCHRONIZATION</span>
-                  <span style={{ fontSize: '0.7rem', fontWeight: 800 }}>STABLE - ∞ PHASE</span>
+                  <span style={{ fontSize: '0.6rem', fontWeight: 900, color: 'var(--accent-primary)', letterSpacing: '2px' }}>SUPREMACY ACTIVE</span>
+                  <span style={{ fontSize: '0.75rem', fontWeight: 900, letterSpacing: '1px' }}>NEURAL SYNC // PROTOCOL ∞</span>
                 </div>
               </div>
             )}
@@ -524,7 +522,7 @@ Requirements:
           right: 0, 
           padding: isMobile ? '1rem 0.75rem 2rem 0.75rem' : '2rem', 
           background: 'linear-gradient(to top, #010101 60%, transparent)',
-          zIndex: 100 
+          zIndex: 1000 
         }}>
           <div className="input-container hologram-card" style={{ 
             margin: '0 auto', 

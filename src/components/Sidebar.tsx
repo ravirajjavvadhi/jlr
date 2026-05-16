@@ -9,6 +9,7 @@ import {
   Settings as SettingsIcon, ShieldAlert, LogOut, Trash2, Edit2,
   Sparkles, Globe, Database, Code, Search
 } from 'lucide-react';
+import RotatingBeast from './RotatingBeast';
 
 interface SidebarProps {
   isOpen: boolean;
@@ -83,12 +84,10 @@ const Sidebar: React.FC<SidebarProps> = ({
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '2rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.8rem' }}>
-          <div style={{ width: '36px', height: '36px', background: 'var(--beast-gradient)', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 0 15px rgba(0, 255, 157, 0.3)' }}>
-            <Zap size={20} fill="black" />
-          </div>
+          <RotatingBeast size={36} />
           <h2 className="text-beast" style={{ fontSize: '1.1rem', letterSpacing: '1px', fontWeight: 900 }}>JLR SUPREMACY</h2>
         </div>
-        <button onClick={onClose} className="btn-ghost" style={{ padding: '6px' }}><PanelLeft size={18} /></button>
+        <button onClick={onClose} style={{ background: 'transparent', border: 'none', color: '#fff', cursor: 'pointer', padding: '6px' }}><PanelLeft size={18} /></button>
       </div>
       
       <button 

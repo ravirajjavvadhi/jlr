@@ -6,17 +6,21 @@ import { AuthProvider } from "@/services/authContext";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "JLR AI | Supremacy Intelligence",
-  description: "Next-generation high-end AI power center. Experience the absolute peak of AI intelligence and multimedia synthesis.",
+  title: "JLR AI SUPREMACY | NEURAL COGNITION",
+  description: "Tactical high-end AI power center. Experience the absolute peak of AI intelligence and multimedia sovereignty.",
   manifest: "/manifest.json",
+  icons: {
+    icon: "/lion-core.png",
+    apple: "/lion-core.png",
+  },
   openGraph: {
-    title: "JLR AI | Supremacy Intelligence",
+    title: "JLR AI SUPREMACY | NEURAL COGNITION",
     description: "The peak of futuristic AI intelligence. Cinematic UI, beast-level performance, and absolute multimedia sovereignty.",
     url: "https://jlr-omega.vercel.app/",
-    siteName: "JLR AI",
+    siteName: "JLR AI SUPREMACY",
     images: [
       {
-        url: "/og-image.png", // Assuming user will place the generated asset here
+        url: "/lion-core.png",
         width: 1200,
         height: 630,
         alt: "JLR AI Supremacy Preview",
@@ -27,14 +31,14 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "JLR AI | Supremacy Intelligence",
+    title: "JLR AI SUPREMACY | NEURAL COGNITION",
     description: "The peak of futuristic AI intelligence.",
-    images: ["/og-image.png"],
+    images: ["/beast-logo.png"],
   },
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
-    title: "JLR AI",
+    title: "JLR AI SUPREMACY",
   },
 };
 
