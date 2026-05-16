@@ -119,28 +119,63 @@ function transformGeminiStream(geminiBody: ReadableStream): ReadableStream {
 }
 
 // [JLR SEARCH NODE]: Execute real-time intelligence gathering
-async function getGlobalIntelligence(query: string) {
+// Uses Tavily (if key set) → DuckDuckGo (always free, no key needed)
+async function getGlobalIntelligence(query: string): Promise<{ answer?: string; results: { title: string; content: string; url: string }[] } | null> {
   const TAVILY_API_KEY = process.env.TAVILY_API_KEY;
-  if (!TAVILY_API_KEY) return null;
-  
-  try {
-    const response = await fetch('https://api.tavily.com/search', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        api_key: TAVILY_API_KEY,
-        query,
-        search_depth: 'basic',
-        include_answer: true,
-        max_results: 3
-      })
-    });
-    const data = await response.json();
-    return data;
-  } catch (e) {
-    console.error("[JLR-SEARCH]: Node Failure.", e);
-    return null;
+
+  // --- Attempt 1: Tavily (premium, accurate) ---
+  if (TAVILY_API_KEY) {
+    try {
+      const res = await fetch('https://api.tavily.com/search', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          api_key: TAVILY_API_KEY,
+          query,
+          search_depth: 'basic',
+          include_answer: true,
+          max_results: 5,
+        }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data?.results?.length > 0) return data;
+      }
+    } catch (e) {
+      console.error('[JLR-SEARCH] Tavily failed, falling back to DuckDuckGo:', e);
+    }
   }
+
+  // --- Attempt 2: DuckDuckGo Instant Answer API (free, no key) ---
+  try {
+    const encoded = encodeURIComponent(query);
+    const ddgRes = await fetch(
+      `https://api.duckduckgo.com/?q=${encoded}&format=json&no_redirect=1&no_html=1&skip_disambig=1`,
+      { headers: { 'User-Agent': 'JLR-AI/1.0' } }
+    );
+    if (ddgRes.ok) {
+      const ddgData = await ddgRes.json();
+      const results: { title: string; content: string; url: string }[] = [];
+      // AbstractText = main answer snippet
+      if (ddgData.AbstractText) {
+        results.push({ title: ddgData.Heading || query, content: ddgData.AbstractText, url: ddgData.AbstractURL || '' });
+      }
+      // RelatedTopics for additional snippets
+      if (ddgData.RelatedTopics) {
+        for (const t of ddgData.RelatedTopics.slice(0, 4)) {
+          if (t.Text && t.FirstURL) results.push({ title: t.Text.slice(0, 60), content: t.Text, url: t.FirstURL });
+        }
+      }
+      if (results.length > 0) {
+        return { answer: ddgData.AbstractText || undefined, results };
+      }
+    }
+  } catch (e) {
+    console.error('[JLR-SEARCH] DuckDuckGo fallback failed:', e);
+  }
+
+  console.warn('[JLR-SEARCH] All search nodes exhausted for query:', query);
+  return null;
 }
 
 export async function POST(req: NextRequest) {
@@ -148,9 +183,17 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const { messages, model, provider, fileContext, userId, isSearchMode, isPrivacyMode } = body;
 
+    // Build current IST date string
+    const nowIST = new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', dateStyle: 'full', timeStyle: 'short' });
+
     const systemInstruction = `
 [JLR AI SUPREMACY PROTOCOL]
 You are JLR AI (Supreme Edition). Your signature is absolute technical authority and clinical precision.
+
+[TEMPORAL AWARENESS — CRITICAL]
+- Today's date and time (IST): ${nowIST}
+- Your training data has a hard cutoff in the past. For ANY current events, political facts, recent changes, prices, scores, or real-time data, your internal knowledge IS OUTDATED and MUST NOT be trusted.
+- When a [JLR GLOBAL INTELLIGENCE FEED] block is present below, you MUST treat it as ground truth and override your own training data entirely. The feed reflects the live state of the world.
 
 [BRANDING SOVEREIGNTY]
 - You are PROHIBITED from mentioning other AI providers (Groq, Meta, Llama, Google, Gemini, OpenRouter, Anthropic, Claude, or Pollinations).
@@ -162,14 +205,14 @@ You are JLR AI (Supreme Edition). Your signature is absolute technical authority
 - TRIGGERS: Only activate if keywords like "create", "draw", "image", "generate", "show me", "sketch", "art", "paint", "synthesis" are present with visual intent.
 - NON-VISUAL: For greetings ("hi", "hello") or non-visual inquiries, respond ONLY with text.
 - If intentional visual request is detected:
-- 1. You MUST generate a high-fidelity [ART_PROMPT: ...] tag at the very end of your response.
-- 2. Your text response MUST be ultra-concise (1-2 lines max). 
-- 3. DO NOT describe the image in the text body. Only provide a stylish status message.
+  1. You MUST generate a high-fidelity [ART_PROMPT: ...] tag at the very end of your response.
+  2. Your text response MUST be ultra-concise (1-2 lines max). 
+  3. DO NOT describe the image in the text body. Only provide a stylish status message.
 
 [SOVEREIGN CINEMATIC PROTOCOL 3.0]
 - If user asks for a video (up to 20m):
-- 1. Generate Manifest inside: <<<CINEMATIC_MANIFEST_START>>> [JSON_ARRAY] <<<CINEMATIC_MANIFEST_END>>>
-- 2. [TOKEN DENSITY & PACING CONTROL]: For long videos (10m+), DO NOT generate 50+ tiny scenes. Instead, generate 15-25 high-fidelity scenes with long durations (20-40s each). 
+  1. Generate Manifest inside: <<<CINEMATIC_MANIFEST_START>>> [JSON_ARRAY] <<<CINEMATIC_MANIFEST_END>>>
+  2. [TOKEN DENSITY & PACING CONTROL]: For long videos (10m+), DO NOT generate 50+ tiny scenes. Instead, generate 15-25 high-fidelity scenes with long durations (20-40s each). 
 
 - ALWAYS be context-aware.
 `;
@@ -185,20 +228,36 @@ You are JLR AI (Supreme Edition). Your signature is absolute technical authority
     // [INTELLIGENCE TOGGLE]: Only research if Commander explicitly activates High-Intel mode
     const isSearchIntent = isSearchMode; // Removed auto-detection to favor Lightning Speed as requested
 
-    // [KEY POOL]: Parse all keys
+    // [KEY POOL]: Parse all keys (env fallback)
     let groqKeysRaw = process.env.GROQ_API_KEY || process.env.NEXT_PUBLIC_GROQ_API_KEY || '';
     let orKeysRaw = process.env.OPENROUTER_API_KEY || process.env.NEXT_PUBLIC_OPENROUTER_API_KEY || '';
     let geminiKeysRaw = process.env.GEMINI_API_KEY || process.env.NEXT_PUBLIC_GEMINI_API_KEY || '';
 
-    // [SOVEREIGN KEY VAULT]: Resolve Master Keys
+    // [SOVEREIGN KEY VAULT]: Resolve Master Keys + Per-User Keys (MUST connect to DB first)
     try {
+      await connectToDatabase();
       const SystemConfig = (await import('@/models/SystemConfig')).default;
-      const configs = await SystemConfig.find({});
-      const masterGroq = configs.find(c => c.key === 'master_groq_keys')?.value;
-      const masterGemini = configs.find(c => c.key === 'master_gemini_keys')?.value;
-      if (masterGroq) groqKeysRaw = groqKeysRaw ? `${masterGroq},${groqKeysRaw}` : masterGroq;
-      if (masterGemini) geminiKeysRaw = geminiKeysRaw ? `${masterGemini},${geminiKeysRaw}` : masterGemini;
-    } catch (e) {}
+      const [configs, userDoc] = await Promise.all([
+        SystemConfig.find({}).lean(),
+        userId ? User.findById(userId).lean() : Promise.resolve(null),
+      ]);
+
+      // Global keys from admin panel
+      const masterGroq = (configs as any[]).find(c => c.key === 'master_groq_keys')?.value;
+      const masterGemini = (configs as any[]).find(c => c.key === 'master_gemini_keys')?.value;
+      if (masterGroq) groqKeysRaw = masterGroq + (groqKeysRaw ? `,${groqKeysRaw}` : '');
+      if (masterGemini) geminiKeysRaw = masterGemini + (geminiKeysRaw ? `,${geminiKeysRaw}` : '');
+
+      // Per-user keys injected by admin panel
+      if (userDoc) {
+        const userGroqRaw = (userDoc as any).custom_api_key || '';
+        const userGeminiArr: string[] = (userDoc as any).gemini_api_keys || [];
+        if (userGroqRaw) groqKeysRaw = userGroqRaw + (groqKeysRaw ? `,${groqKeysRaw}` : '');
+        if (userGeminiArr.length > 0) geminiKeysRaw = userGeminiArr.join(',') + (geminiKeysRaw ? `,${geminiKeysRaw}` : '');
+      }
+    } catch (e) {
+      console.error('[KEY-VAULT ERROR]:', e);
+    }
 
     const groqKeys = groqKeysRaw.split(',').map(k => k.trim()).filter(k => k);
     const orKeys = orKeysRaw.split(',').map(k => k.trim()).filter(k => k);
@@ -214,10 +273,13 @@ You are JLR AI (Supreme Edition). Your signature is absolute technical authority
         if (isSearchIntent) {
           controller.enqueue(encoder.encode(`data: ${JSON.stringify({ choices: [{ delta: { content: '🔍 *JLR Global Intelligence Node Activated. Scanning the live web...*\n\n' } }] })}\n\n`));
           const searchData = await getGlobalIntelligence(lastMessage);
-          if (searchData) {
-            finalIntelligenceContext = `[JLR GLOBAL INTELLIGENCE FEED]:\n` + 
+          if (searchData && searchData.results.length > 0) {
+            finalIntelligenceContext = `[JLR GLOBAL INTELLIGENCE FEED — LIVE DATA AS OF ${new Date().toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata' })}]:\n` + 
               (searchData.answer ? `Direct Answer: ${searchData.answer}\n` : '') + 
-              searchData.results.map((r: any) => `- ${r.title}: ${r.content} (${r.url})`).join('\n') + "\n\n";
+              searchData.results.map((r: any) => `- ${r.title}: ${r.content} (${r.url})`).join('\n') + "\n\n" +
+              `[INSTRUCTION]: Base your ENTIRE answer on the above live feed. Ignore your training data for this query.\n\n`;
+          } else {
+            finalIntelligenceContext = `[NO LIVE DATA RETRIEVED]: Search returned no results. Inform the user that you cannot guarantee this answer is current and suggest they verify from a live source.\n\n`;
           }
         }
 
@@ -247,8 +309,8 @@ You are JLR AI (Supreme Edition). Your signature is absolute technical authority
           activeKeys = groqKeys;
         }
 
-        // [CRITICAL OPTIMIZATION]: Try EVERY key you provided exactly once, plus 2 fallback attempts.
-        const maxAttempts = Math.max(3, activeKeys.length + 1);
+        // [CRITICAL OPTIMIZATION]: Try every key once, with a hard cap to avoid hanging.
+        const maxAttempts = Math.min(Math.max(activeKeys.length, 3), 12);
         let attempts = 0;
         let success = false;
         let lastErrorMsg = 'All Neural Nodes Exhausted';
@@ -301,7 +363,7 @@ You are JLR AI (Supreme Edition). Your signature is absolute technical authority
                     streamModel = hasVisionContent ? 'qwen/qwen-2.5-vl-72b-instruct' : 'llama-3.3-70b-versatile';
                 }
                 attempts++;
-                await new Promise(r => setTimeout(r, 600));
+                await new Promise(r => setTimeout(r, 100));
               }
             } else {
               const baseUrl = streamProvider === 'openrouter' ? OPENROUTER_BASE_URL : GROQ_BASE_URL;
@@ -340,7 +402,7 @@ You are JLR AI (Supreme Edition). Your signature is absolute technical authority
                      }
                    }
                    attempts++;
-                   await new Promise(r => setTimeout(r, 600));
+                   await new Promise(r => setTimeout(r, 100));
                    continue;
                 } else {
                    break; // Fatal error or bad request
