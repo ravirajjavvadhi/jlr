@@ -6,25 +6,60 @@
   /* Peak Design Tokens - JLR Supremacy Edition */
   --background: #020202;
   --foreground: #ffffff;
-  
   --accent-primary: #00d2ff;
-  --accent-secondary: #3a7bd5;
+  --accent-secondary: #0084ff;
   --accent-beast: #00ff9d;
-  --accent-warning: #ff3e3e;
-  
-  --accent-gradient: linear-gradient(135deg, #00d2ff 0%, #3a7bd5 100%);
-  --beast-gradient: linear-gradient(135deg, #00ff9d 0%, #00d2ff 100%);
-  --fire-gradient: linear-gradient(135deg, #ff3e3e 0%, #ff8c00 100%);
-  
-  --glass-bg: rgba(255, 255, 255, 0.03);
+  --accent-beast-glow: rgba(0, 255, 157, 0.4);
+  --glass-bg: rgba(5, 5, 5, 0.7);
   --glass-border: rgba(255, 255, 255, 0.08);
-  --glass-blur: 24px;
-  
-  --shadow-peak: 0 10px 40px rgba(0,0,0,0.8);
-  --shadow-glow: 0 0 20px rgba(0, 210, 255, 0.2);
+  --glass-border-bright: rgba(255, 255, 255, 0.15);
+  --accent-gradient: linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-beast) 100%);
+  --beast-gradient: linear-gradient(135deg, #00ff9d 0%, #00d2ff 100%);
+  --supreme-glow: 0 0 30px rgba(0, 210, 255, 0.3);
   
   --font-brand: 'Outfit', sans-serif;
   --font-code: 'JetBrains Mono', monospace;
+}
+
+@keyframes scanline {
+  0% { transform: translateY(-100%); }
+  100% { transform: translateY(100%); }
+}
+
+@keyframes pulse-beast {
+  0%, 100% { opacity: 0.8; transform: scale(1); filter: brightness(1); }
+  50% { opacity: 1; transform: scale(1.02); filter: brightness(1.3); }
+}
+
+.scanlines {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(to bottom, transparent 50%, rgba(0, 210, 255, 0.02) 50%);
+  background-size: 100% 4px;
+  z-index: 10;
+  pointer-events: none;
+}
+
+.branding-text {
+  font-family: var(--font-outfit);
+  font-weight: 900;
+  letter-spacing: 12px;
+  text-transform: uppercase;
+  background: var(--accent-gradient);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 0 15px rgba(0, 210, 255, 0.5));
+  animation: pulse-beast 4s infinite ease-in-out;
+}
+
+.neural-mesh-bg {
+  position: fixed;
+  inset: 0;
+  background: radial-gradient(circle at 50% 50%, #050505 0%, #000 100%);
+  z-index: -1;
 }
 
 .text-gold {

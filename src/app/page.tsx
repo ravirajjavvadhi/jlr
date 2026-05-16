@@ -20,6 +20,7 @@ import Settings from '@/components/Settings';
 import NeuralCanvas from '@/components/NeuralCanvas';
 import SovereignCinematic from '@/components/SovereignCinematic';
 import Sidebar from '@/components/Sidebar';
+import NeuralCanvas3D from '@/components/NeuralCanvas3D';
 
 const CodeBlock = ({ inline, className, children, ...props }: any) => {
   const [copied, setCopied] = useState(false);
@@ -276,8 +277,23 @@ Requirements:
       display: 'flex', 
       background: '#010101' 
     }}>
+      {/* Neural Omniscience Background Engine */}
+      <NeuralCanvas3D />
+      
       {/* Cinematic Background Scanlines */}
       <div className="scanlines" style={{ pointerEvents: 'none' }} />
+
+      {/* Giant Holographic Watermark Branding */}
+      <motion.div 
+        animate={{ 
+          opacity: [0.03, 0.06, 0.03],
+          scale: [1, 1.05, 1]
+        }}
+        transition={{ duration: 10, repeat: Infinity, ease: "linear" }}
+        style={{ position: 'fixed', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none', zIndex: 1 }}
+      >
+        <h1 className="branding-text" style={{ fontSize: isMobile ? '12vw' : '15vw', whiteSpace: 'nowrap' }}>JLR AI</h1>
+      </motion.div>
       
       <Settings isOpen={isSettingsOpen} onClose={() => setSettingsOpen(false)} />
       
@@ -349,9 +365,15 @@ Requirements:
               <PanelLeft size={20} />
             </button>
             {!isMobile && (
-              <div style={{ display: 'flex', flexDirection: 'column' }}>
-                <span style={{ fontSize: '0.65rem', fontWeight: 900, letterSpacing: '2px', color: 'var(--accent-primary)', textTransform: 'uppercase' }}>JLR AI</span>
-                <span style={{ fontSize: '0.9rem', fontWeight: 800 }}>SUPREMACY</span>
+              <div style={{ display: 'flex', gap: '1.5rem', marginLeft: '2rem' }}>
+                <div style={{ display: 'flex', flexDirection: 'column' }}>
+                  <span style={{ fontSize: '0.55rem', fontWeight: 900, color: 'var(--accent-primary)', letterSpacing: '1px' }}>CORE STATUS</span>
+                  <span style={{ fontSize: '0.7rem', fontWeight: 800 }}>SOVEREIGN: ACTIVE</span>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column' }}>
+                  <span style={{ fontSize: '0.55rem', fontWeight: 900, color: 'var(--accent-beast)', letterSpacing: '1px' }}>NEURAL SYNCHRONIZATION</span>
+                  <span style={{ fontSize: '0.7rem', fontWeight: 800 }}>STABLE - ∞ PHASE</span>
+                </div>
               </div>
             )}
           </div>
@@ -406,8 +428,20 @@ Requirements:
               </div>
             ) : (
               localMessages.map((msg: any) => (
-                <div key={msg.id} style={{ marginBottom: '3rem', opacity: 1 }}>
-                  <div style={{ display: 'flex', gap: isMobile ? '1rem' : '1.5rem', alignItems: 'flex-start' }}>
+                <div key={msg.id} style={{ marginBottom: '3rem', opacity: 1, position: 'relative' }}>
+                  {/* Neural Connector Line */}
+                  <div style={{ 
+                    position: 'absolute', 
+                    left: isMobile ? '17px' : '17px', 
+                    top: '40px', 
+                    bottom: '-48px', 
+                    width: '2px', 
+                    background: 'linear-gradient(to bottom, var(--accent-primary), transparent)', 
+                    opacity: 0.2, 
+                    zIndex: 0 
+                  }} />
+
+                  <div style={{ display: 'flex', gap: isMobile ? '1rem' : '1.5rem', alignItems: 'flex-start', position: 'relative', zIndex: 1 }}>
                     <div style={{ 
                       width: '36px', 
                       height: '36px', 
@@ -417,7 +451,8 @@ Requirements:
                       alignItems: 'center', 
                       justifyContent: 'center',
                       flexShrink: 0,
-                      marginTop: '4px'
+                      marginTop: '4px',
+                      boxShadow: msg.role === 'assistant' ? '0 0 15px rgba(0, 210, 255, 0.4)' : 'none'
                     }}>
                       {msg.role === 'assistant' ? <Zap size={18} fill="black" /> : <User size={18} />}
                     </div>

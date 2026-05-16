@@ -1,11 +1,19 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Zap, User, Lock, ArrowRight } from 'lucide-react';
 import { useAuth } from '@/services/authContext';
 
 export default function AuthScreen({ onClose }: { onClose?: () => void }) {
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 1024);
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState('');
@@ -46,10 +54,10 @@ export default function AuthScreen({ onClose }: { onClose?: () => void }) {
 
 
   return (
-    <div style={{ height: '100dvh', width: '100vw', position: 'fixed', inset: 0, background: '#000', overflow: 'hidden', display: 'flex', flexDirection: isLogin ? 'row' : 'row-reverse' }}>
+    <div style={{ height: '100dvh', width: '100vw', position: 'fixed', inset: 0, background: '#000', overflow: 'hidden', display: 'flex' }}>
       {/* LEFT/RIGHT CINEMATIC HERO (Hidden on Mobile) */}
-      {!onClose && (
-        <div style={{ flex: 1, display: isLogin ? (window.innerWidth < 768 ? 'none' : 'flex') : 'flex', position: 'relative', overflow: 'hidden', background: '#050505', alignItems: 'center', justifyContent: 'center' }}>
+      {!isMobile && (
+        <div style={{ flex: 1, display: 'flex', position: 'relative', overflow: 'hidden', background: '#050505', alignItems: 'center', justifyContent: 'center' }}>
           <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(circle at center, rgba(0, 210, 255, 0.05) 0%, transparent 70%)', zIndex: 0 }} />
           <motion.div
             initial={{ opacity: 0, scale: 0.9 }}
@@ -58,7 +66,7 @@ export default function AuthScreen({ onClose }: { onClose?: () => void }) {
             style={{ textAlign: 'center', zIndex: 1 }}
           >
             <Zap size={80} style={{ color: 'var(--accent-primary)', marginBottom: '2rem', filter: 'drop-shadow(0 0 20px rgba(0,210,255,0.4))' }} />
-            <h2 style={{ fontFamily: 'var(--font-brand)', fontSize: '3rem', fontWeight: 900, letterSpacing: '8px', color: '#fff', textTransform: 'uppercase' }}>JLR AI</h2>
+            <h2 className="branding-text" style={{ fontSize: '3rem', letterSpacing: '12px' }}>JLR AI</h2>
             <p style={{ fontSize: '0.8rem', opacity: 0.4, letterSpacing: '4px', marginTop: '1rem', fontWeight: 700 }}>SOVEREIGN INTELLIGENCE CORE</p>
           </motion.div>
         </div>
@@ -74,14 +82,19 @@ export default function AuthScreen({ onClose }: { onClose?: () => void }) {
           animate={{ opacity: 1, x: 0 }}
           style={{ width: '100%', maxWidth: '400px', position: 'relative' }}
         >
-          {/* HEADER */}
-          <div style={{ marginBottom: '3rem' }}>
-             <h3 style={{ fontSize: '0.7rem', fontWeight: 900, letterSpacing: '4px', color: 'var(--accent-primary)', textTransform: 'uppercase', marginBottom: '0.5rem' }}>
-               {isLogin ? 'Protocol: Login' : 'Protocol: Initialize'}
-             </h3>
-             <h1 style={{ fontSize: '2rem', fontWeight: 900, color: '#fff', letterSpacing: '-0.02em' }}>
-               {isLogin ? 'Welcome, Commander.' : 'Create your identity.'}
-             </h1>
+          <div className="branding-container" style={{ textAlign: 'left', maxWidth: '600px', marginBottom: '2rem' }}>
+            <motion.div 
+              initial={{ opacity: 0, x: -50 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 1, ease: "easeOut" }}
+            >
+              <h1 className="branding-text" style={{ fontSize: isMobile ? '2rem' : '3.5rem', marginBottom: '0.5rem', lineHeight: 1.1, color: '#fff' }}>
+                JLR AI<br/><span style={{ fontSize: '0.4em', letterSpacing: '24px', opacity: 0.8 }}>SUPREMACY</span>
+              </h1>
+              <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: isMobile ? '0.7rem' : '0.9rem', fontWeight: 700, letterSpacing: '2px', textTransform: 'uppercase', marginTop: '1rem' }}>
+                The Intelligence Core is Awaiting.
+              </p>
+            </motion.div>
           </div>
 
           {onClose && (
