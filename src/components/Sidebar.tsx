@@ -76,8 +76,8 @@ const Sidebar: React.FC<SidebarProps> = ({
         bottom: 0,
         left: 0,
         width: isMobile ? '85%' : '280px',
-        zIndex: 100,
-        boxShadow: isMobile && isOpen ? '20px 0 50px rgba(0,0,0,0.5)' : 'none',
+        zIndex: 5000000, // Absolute Peak Sovereignty to overlay fixed inputs
+        boxShadow: isMobile && isOpen ? '20px 0 50px rgba(0,0,0,0.8)' : 'none',
         padding: '1.25rem'
       }}
     >

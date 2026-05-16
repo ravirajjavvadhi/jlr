@@ -138,17 +138,18 @@ body::before {
   opacity: 0.15;
 }
 
-/* Neural Grid Overlay */
+/* Neural Grid Overlay - Optimized */
 .neural-overlay {
   position: fixed;
   inset: 0;
   background-image: 
-    linear-gradient(rgba(0, 242, 254, 0.03) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(0, 242, 254, 0.03) 1px, transparent 1px);
+    linear-gradient(rgba(0, 242, 254, 0.02) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 242, 254, 0.02) 1px, transparent 1px);
   background-size: 50px 50px;
   mask-image: radial-gradient(circle at center, black, transparent 80%);
   pointer-events: none;
-  animation: gridFloat 20s linear infinite;
+  animation: gridFloat 30s linear infinite;
+  will-change: background-position;
 }
 
 @keyframes gridFloat {
@@ -196,15 +197,16 @@ body::before {
   to { transform: translateX(100%) rotate(45deg); }
 }
 
-/* Holographic Glass surface */
+/* Holographic Glass surface - Performance Hardened */
 .hologram-card {
   background: var(--glass-bg);
-  backdrop-filter: blur(var(--glass-blur));
-  -webkit-backdrop-filter: blur(var(--glass-blur));
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
   border: 1px solid var(--glass-border);
   border-radius: 24px;
   position: relative;
   transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  will-change: transform, opacity;
 }
 
 .hologram-card::before {

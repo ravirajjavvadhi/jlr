@@ -361,17 +361,16 @@ Requirements:
         }}
       >
         {/* PEAK HEADER */}
-        <header style={{ 
-          padding: isMobile ? '0.75rem 1rem' : '1rem 2rem', 
-          display: 'flex', 
-          alignItems: 'center', 
-          justifyContent: 'space-between', 
-          background: 'rgba(1,1,1,0.6)', 
-          backdropFilter: 'blur(30px)', 
-          borderBottom: '1px solid var(--glass-border)', 
-          zIndex: 50,
-          position: 'relative'
-        }}>
+        <motion.div 
+          className="header-beast"
+          initial={{ y: -20, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          style={{ 
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: isMobile ? '0.75rem 1rem' : '1rem 2rem', 
+            background: 'rgba(5,5,5,0.7)', backdropFilter: 'blur(10px)', borderBottom: '1px solid var(--glass-border)', zIndex: 1000,
+            willChange: 'transform, opacity' // Hardware acceleration
+          }}
+        >
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
             <button 
               onClick={() => setSidebarOpen(true)} 
@@ -409,7 +408,7 @@ Requirements:
               <SettingsIcon size={18} />
             </button>
           </div>
-        </header>
+        </motion.div>
 
         {/* CHAT AREA */}
         <div className="chat-scroll" ref={scrollRef} style={{ 
@@ -422,7 +421,13 @@ Requirements:
         }}>
           <div className="chat-container" style={{ width: '100%', maxWidth: '800px', paddingBottom: '160px' }}>
             {localMessages.length === 0 ? (
-              <div style={{ height: '50vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '2rem' }}>
+              <div 
+                className="centerpiece" 
+                style={{ 
+                  display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '60%', textAlign: 'center', gap: '2rem',
+                  willChange: 'transform, opacity'
+                }}
+              >
                 <RotatingBeast size={isMobile ? 120 : 180} />
                 <div style={{ textAlign: 'center' }}>
                   <h1 style={{ fontSize: isMobile ? '1.8rem' : '3.5rem', fontWeight: 900, letterSpacing: '12px', textTransform: 'uppercase', marginBottom: '0.5rem', background: 'var(--gold-gradient)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>NEURAL SYNC</h1>
@@ -519,124 +524,127 @@ Requirements:
           </div>
         </div>
 
-        {/* COMMAND CENTER - ABSOLUTE STABILITY LAYER */}
-        <div className="command-center" style={{ 
-          position: 'fixed',
-          bottom: 0,
-          left: isMobile ? 0 : (isSidebarOpen ? '280px' : 0),
-          right: 0,
-          padding: isMobile ? '12px' : '0 2rem 30px 2rem', 
-          background: 'transparent',
-          zIndex: 3000000, 
-          pointerEvents: 'auto', // Direct interaction enabled
-          transition: 'left 0.3s ease'
-        }}>
-          <div className="input-container" style={{ 
-            margin: '0 auto', 
-            width: '100%', 
-            maxWidth: '850px',
-            padding: '12px 16px',
-            borderRadius: '24px',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '10px',
-            background: 'rgba(5,5,5,0.95)', 
-            border: '1px solid rgba(255,255,255,0.15)',
-            boxShadow: '0 10px 50px rgba(0,0,0,0.8)',
-            backdropFilter: 'blur(40px)',
-            pointerEvents: 'auto'
+        {/* COMMAND CENTER - FIXED VIEWPORT LAYER (Hidden on mobile when sidebar open) */}
+        {(!isMobile || !isSidebarOpen) && (
+          <div className="command-center" style={{ 
+            position: 'fixed',
+            bottom: 0,
+            left: isMobile ? 0 : (isSidebarOpen ? '280px' : 0),
+            right: 0,
+            padding: isMobile ? '12px' : '0 2rem 30px 2rem', 
+            background: 'transparent',
+            zIndex: 3000000, 
+            pointerEvents: 'auto',
+            transition: 'left 0.3s ease',
+            willChange: 'left'
           }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-               <div style={{ display: 'flex', gap: '8px' }}>
-                 <button 
-                   onClick={() => setIsSearchMode(!isSearchMode)}
-                   style={{ 
-                     display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 12px', borderRadius: '12px', 
-                     background: isSearchMode ? 'rgba(0,210,255,0.1)' : 'rgba(255,255,255,0.03)',
-                     border: isSearchMode ? '1px solid rgba(0,210,255,0.3)' : '1px solid var(--glass-border)',
-                     color: isSearchMode ? 'var(--accent-primary)' : 'rgba(255,255,255,0.4)',
-                     fontSize: '0.65rem', fontWeight: 900, cursor: 'pointer', transition: 'all 0.3s'
-                   }}
+            <div className="input-container" style={{ 
+              margin: '0 auto', 
+              width: '100%', 
+              maxWidth: '850px',
+              padding: '12px 16px',
+              borderRadius: '24px',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '10px',
+              background: 'rgba(5,5,5,0.95)', 
+              border: '1px solid rgba(255,255,255,0.15)',
+              boxShadow: '0 10px 50px rgba(0,0,0,0.8)',
+              backdropFilter: isMobile ? 'none' : 'blur(40px)', // Disable expensive blur on mobile for speed
+              pointerEvents: 'auto'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                 <div style={{ display: 'flex', gap: '8px' }}>
+                   <button 
+                     onClick={() => setIsSearchMode(!isSearchMode)}
+                     style={{ 
+                       display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 12px', borderRadius: '12px', 
+                       background: isSearchMode ? 'rgba(0,210,255,0.1)' : 'rgba(255,255,255,0.03)',
+                       border: isSearchMode ? '1px solid rgba(0,210,255,0.3)' : '1px solid var(--glass-border)',
+                       color: isSearchMode ? 'var(--accent-primary)' : 'rgba(255,255,255,0.4)',
+                       fontSize: '0.65rem', fontWeight: 900, cursor: 'pointer', transition: 'all 0.3s'
+                     }}
+                   >
+                     <Globe size={12} /> {isSearchMode ? 'SEARCH: ON' : 'SEARCH'}
+                   </button>
+                   <button 
+                     onClick={() => setIsPrivacyMode(!isPrivacyMode)}
+                     style={{ 
+                       display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 12px', borderRadius: '12px', 
+                       background: isPrivacyMode ? 'rgba(0,255,157,0.1)' : 'rgba(255,255,255,0.03)',
+                       border: isPrivacyMode ? '1px solid rgba(0,255,157,0.3)' : '1px solid var(--glass-border)',
+                       color: isPrivacyMode ? 'var(--accent-beast)' : 'rgba(255,255,255,0.4)',
+                       fontSize: '0.65rem', fontWeight: 900, cursor: 'pointer', transition: 'all 0.3s'
+                     }}
+                   >
+                     {isPrivacyMode ? <ShieldCheck size={12} /> : <EyeOff size={12} />}
+                     {isPrivacyMode ? 'PRIVATE: ACTIVE' : 'PRIVATE'}
+                   </button>
+                 </div>
+                 <select 
+                   value={responseIntelligence}
+                   onChange={(e) => setResponseIntelligence(e.target.value as any)}
+                   style={{ background: 'transparent', border: 'none', color: 'rgba(255,255,255,0.5)', fontSize: '0.65rem', fontWeight: 900, cursor: 'pointer', outline: 'none' }}
                  >
-                   <Globe size={12} /> {isSearchMode ? 'SEARCH: ON' : 'SEARCH'}
-                 </button>
-                 <button 
-                   onClick={() => setIsPrivacyMode(!isPrivacyMode)}
-                   style={{ 
-                     display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 12px', borderRadius: '12px', 
-                     background: isPrivacyMode ? 'rgba(0,255,157,0.1)' : 'rgba(255,255,255,0.03)',
-                     border: isPrivacyMode ? '1px solid rgba(0,255,157,0.3)' : '1px solid var(--glass-border)',
-                     color: isPrivacyMode ? 'var(--accent-beast)' : 'rgba(255,255,255,0.4)',
-                     fontSize: '0.65rem', fontWeight: 900, cursor: 'pointer', transition: 'all 0.3s'
-                   }}
-                 >
-                   {isPrivacyMode ? <ShieldCheck size={12} /> : <EyeOff size={12} />}
-                   {isPrivacyMode ? 'PRIVATE: ACTIVE' : 'PRIVATE'}
-                 </button>
-               </div>
-               <select 
-                 value={responseIntelligence}
-                 onChange={(e) => setResponseIntelligence(e.target.value as any)}
-                 style={{ background: 'transparent', border: 'none', color: 'rgba(255,255,255,0.5)', fontSize: '0.65rem', fontWeight: 900, cursor: 'pointer', outline: 'none' }}
-               >
-                 <option value="auto">AUTO</option>
-                 <option value="concise">CONCISE</option>
-                 <option value="medium">MEDIUM</option>
-                 <option value="long">LONG</option>
-               </select>
-            </div>
+                   <option value="auto">AUTO</option>
+                   <option value="concise">CONCISE</option>
+                   <option value="medium">MEDIUM</option>
+                   <option value="long">LONG</option>
+                 </select>
+              </div>
 
-            <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-              <FileUploader files={files} onFilesChange={setFiles} />
-              <textarea 
-                value={input} 
-                onChange={(e) => setInput(e.target.value)} 
-                placeholder="Synchronize command..." 
-                autoFocus
-                rows={1}
-                id="chat-input-sovereign"
-                style={{ 
-                  flex: 1, 
-                  maxHeight: '120px', 
-                  fontSize: '1rem', 
-                  padding: '12px 0',
-                  background: 'transparent',
-                  border: 'none',
-                  outline: 'none',
-                  color: '#fff',
-                  lineHeight: '1.5',
-                  resize: 'none',
-                  pointerEvents: 'auto',
-                  cursor: 'text'
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault();
-                    handleSendMessage();
-                  }
-                }}
-              />
-              <motion.button 
-                whileHover={{ scale: 1.1, color: 'var(--accent-primary)' }}
-                whileTap={{ scale: 0.9 }}
-                onClick={handleSendMessage}
-                disabled={isLoading}
-                style={{ 
-                  background: 'transparent', 
-                  border: 'none', 
-                  color: '#fff', 
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  padding: '8px'
-                }}
-              >
-                <ArrowRight size={22} />
-              </motion.button>
+              <div style={{ display: 'flex', gap: '12px', alignItems: 'center', willChange: 'contents' }}>
+                <FileUploader files={files} onFilesChange={setFiles} />
+                <textarea 
+                  value={input} 
+                  onChange={(e) => setInput(e.target.value)} 
+                  placeholder="Synchronize command..." 
+                  autoFocus
+                  rows={1}
+                  id="chat-input-sovereign"
+                  style={{ 
+                    flex: 1, 
+                    maxHeight: '120px', 
+                    fontSize: '1rem', 
+                    padding: '12px 0',
+                    background: 'transparent',
+                    border: 'none',
+                    outline: 'none',
+                    color: '#fff',
+                    lineHeight: '1.5',
+                    resize: 'none',
+                    pointerEvents: 'auto',
+                    cursor: 'text'
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault();
+                      handleSendMessage();
+                    }
+                  }}
+                />
+                <motion.button 
+                  whileHover={{ scale: 1.1, color: 'var(--accent-primary)' }}
+                  whileTap={{ scale: 0.9 }}
+                  onClick={handleSendMessage}
+                  disabled={isLoading}
+                  style={{ 
+                    background: 'transparent', 
+                    border: 'none', 
+                    color: '#fff', 
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    padding: '8px'
+                  }}
+                >
+                  <ArrowRight size={22} />
+                </motion.button>
+              </div>
             </div>
           </div>
-        </div>
+        )}
       </main>
 
       <AnimatePresence>

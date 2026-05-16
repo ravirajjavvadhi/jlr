@@ -18,8 +18,8 @@ export default function NeuralCanvas3D() {
 
     let animationFrameId: number;
     let particles: Particle[] = [];
-    const particleCount = isMobile ? 40 : 100;
-    const connectionDistance = isMobile ? 100 : 150;
+    const particleCount = isMobile ? 25 : 60;
+    const connectionDistance = isMobile ? 0 : 120; // Disable connections on mobile
     const mouse = { x: 0, y: 0, radius: 150 };
 
     class Particle {
@@ -64,10 +64,7 @@ export default function NeuralCanvas3D() {
         ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
         ctx.fillStyle = this.color;
         ctx.fill();
-        
-        // Add glow
-        ctx.shadowBlur = 10;
-        ctx.shadowColor = this.color;
+        // REMOVED shadowBlur - High GPU cost
       }
     }
 
@@ -83,20 +80,22 @@ export default function NeuralCanvas3D() {
     const animate = () => {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       
-      // Draw Connections
-      for (let i = 0; i < particles.length; i++) {
-        for (let j = i + 1; j < particles.length; j++) {
-          const dx = particles[i].x - particles[j].x;
-          const dy = particles[i].y - particles[j].y;
-          const distance = Math.sqrt(dx * dx + dy * dy);
+      // Draw Connections (Skipped on mobile for performance)
+      if (!isMobile) {
+        for (let i = 0; i < particles.length; i++) {
+          for (let j = i + 1; j < particles.length; j++) {
+            const dx = particles[i].x - particles[j].x;
+            const dy = particles[i].y - particles[j].y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
 
-          if (distance < connectionDistance) {
-            ctx.beginPath();
-            ctx.strokeStyle = `rgba(0, 210, 255, ${1 - distance / connectionDistance})`;
-            ctx.lineWidth = 0.5;
-            ctx.moveTo(particles[i].x, particles[i].y);
-            ctx.lineTo(particles[j].x, particles[j].y);
-            ctx.stroke();
+            if (distance < connectionDistance) {
+              ctx.beginPath();
+              ctx.strokeStyle = `rgba(0, 210, 255, ${1 - distance / connectionDistance})`;
+              ctx.lineWidth = 0.5;
+              ctx.moveTo(particles[i].x, particles[i].y);
+              ctx.lineTo(particles[j].x, particles[j].y);
+              ctx.stroke();
+            }
           }
         }
       }
