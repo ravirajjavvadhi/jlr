@@ -20,10 +20,11 @@ export const metadata: Metadata = {
     siteName: "JLR AI SUPREMACY",
     images: [
       {
-        url: "/meta-preview.png",
+        url: "https://jlr-omega.vercel.app/meta-preview.png",
         width: 1200,
         height: 630,
         alt: "JLR AI SUPREMACY Preview",
+        type: "image/png",
       },
     ],
     locale: "en_US",
@@ -32,8 +33,8 @@ export const metadata: Metadata = {
   twitter: {
     card: "summary_large_image",
     title: "JLR AI SUPREMACY | NEURAL COGNITION",
-    description: "The peak of futuristic AI intelligence.",
-    images: ["/meta-preview.png"],
+    description: "The peak of futuristic AI intelligence. Experience cinematic UI and absolute multimedia sovereignty.",
+    images: ["https://jlr-omega.vercel.app/meta-preview.png"],
   },
   appleWebApp: {
     capable: true,
