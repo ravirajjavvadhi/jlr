@@ -285,15 +285,29 @@ Requirements:
       <div className="scanlines" style={{ pointerEvents: 'none' }} />
 
       {/* Giant Holographic Watermark Branding */}
+      {/* Giant Holographic Watermark - ANCHORED TO BACKGROUND layer */}
       <motion.div 
-        animate={{ 
-          opacity: [0.03, 0.06, 0.03],
-          scale: [1, 1.05, 1]
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 0.02 }}
+        style={{ 
+          position: 'fixed', 
+          inset: 0, 
+          display: 'flex', 
+          alignItems: 'center', 
+          justifyContent: 'center', 
+          pointerEvents: 'none', 
+          zIndex: -10, // Moved below EVERYTHING
+          userSelect: 'none'
         }}
-        transition={{ duration: 10, repeat: Infinity, ease: "linear" }}
-        style={{ position: 'fixed', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none', zIndex: 1 }}
       >
-        <h1 className="branding-text" style={{ fontSize: isMobile ? '12vw' : '15vw', whiteSpace: 'nowrap' }}>JLR AI</h1>
+        <h1 style={{ 
+          fontSize: isMobile ? '12vw' : '15vw', 
+          fontWeight: 900, 
+          color: 'rgba(255,255,255,1)', 
+          opacity: 0.03, 
+          letterSpacing: '2vw',
+          fontFamily: 'Montserrat'
+        }}>JLR AI</h1>
       </motion.div>
       
       <Settings isOpen={isSettingsOpen} onClose={() => setSettingsOpen(false)} />
@@ -505,25 +519,29 @@ Requirements:
           </div>
         </div>
 
-        {/* COMMAND CENTER */}
+        {/* COMMAND CENTER - ULTRA HARDENED LAYER */}
         <div className="command-center" style={{ 
-          position: 'absolute', 
-          bottom: 0, 
-          left: 0, 
-          right: 0, 
-          padding: isMobile ? '1rem 0.75rem 2rem 0.75rem' : '2rem', 
-          background: 'linear-gradient(to top, #010101 60%, transparent)',
-          zIndex: 99999,
+          padding: isMobile ? '1rem 0.75rem 2rem 0.75rem' : '20px 2rem 40px 2rem', 
+          background: 'rgba(2,2,2,0.98)',
+          borderTop: '1px solid rgba(255,255,255,0.05)',
+          backdropFilter: 'blur(30px)',
+          zIndex: 2000000, // Absolute peak priority
+          position: 'sticky',
+          bottom: 0,
           pointerEvents: 'auto'
         }}>
-          <div className="input-container hologram-card" style={{ 
+          <div className="input-container" style={{ 
             margin: '0 auto', 
-            maxWidth: '850px', 
+            width: '100%', 
+            maxWidth: '850px',
             padding: '12px 16px',
             borderRadius: '24px',
             display: 'flex',
             flexDirection: 'column',
-            gap: '10px'
+            gap: '10px',
+            background: 'rgba(255,255,255,0.03)',
+            border: '1px solid var(--glass-border)',
+            pointerEvents: 'auto'
           }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                <div style={{ display: 'flex', gap: '8px' }}>
@@ -565,9 +583,8 @@ Requirements:
                </select>
             </div>
 
-            <div style={{ display: 'flex', alignItems: 'flex-end', gap: '12px' }}>
-              <FileUploader files={files} onFilesChange={setFiles} showButton={true} showPreviews={true} />
-              
+            <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+              <FileUploader files={files} onFilesChange={setFiles} />
               <textarea 
                 value={input} 
                 onChange={(e) => setInput(e.target.value)} 
@@ -577,13 +594,14 @@ Requirements:
                   flex: 1, 
                   maxHeight: '120px', 
                   fontSize: '1rem', 
-                  padding: '8px 0',
+                  padding: '12px 0',
                   background: 'transparent',
                   border: 'none',
                   outline: 'none',
                   color: '#fff',
                   lineHeight: '1.5',
-                  resize: 'none'
+                  resize: 'none',
+                  pointerEvents: 'auto'
                 }}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' && !e.shiftKey) {
@@ -592,28 +610,23 @@ Requirements:
                   }
                 }}
               />
-              
               <motion.button 
-                whileHover={{ scale: 1.05, background: '#fff' }}
-                whileTap={{ scale: 0.95 }}
-                onClick={handleSendMessage} 
-                disabled={!input.trim() && files.length === 0}
+                whileHover={{ scale: 1.1, color: 'var(--accent-primary)' }}
+                whileTap={{ scale: 0.9 }}
+                onClick={handleSendMessage}
+                disabled={isLoading}
                 style={{ 
-                  width: '42px', 
-                  height: '42px', 
-                  borderRadius: '14px', 
-                  background: input.trim() ? 'var(--accent-primary)' : 'rgba(255,255,255,0.05)', 
+                  background: 'transparent', 
                   border: 'none', 
-                  color: '#000',
+                  color: 'rgba(255,255,255,0.4)', 
+                  cursor: 'pointer',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  flexShrink: 0,
-                  cursor: 'pointer',
-                  transition: 'all 0.3s'
+                  padding: '8px'
                 }}
               >
-                <ArrowRight size={20} strokeWidth={3} />
+                <ArrowRight size={20} />
               </motion.button>
             </div>
           </div>
@@ -626,7 +639,7 @@ Requirements:
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(10px)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+            style={{ position: 'fixed', inset: 0, zIndex: 3000000, background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(10px)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
           >
             <AuthScreen onClose={() => setShowAuthModal(false)} />
           </motion.div>

@@ -133,57 +133,77 @@ export default function AuthScreen({ onClose }: { onClose?: () => void }) {
           </motion.div>
         )}
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.75rem' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
           <motion.button 
-            whileHover={{ scale: 1.03, background: 'rgba(191, 149, 63, 0.1)' }}
-            whileTap={{ scale: 0.97 }}
+            whileHover={{ scale: 1.02, background: 'rgba(191, 149, 63, 0.15)' }}
+            whileTap={{ scale: 0.98 }}
             onClick={handleGoogleLogin}
             disabled={loading} 
-            style={{ width: '100%', padding: '1.2rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '1.25rem', fontSize: '0.85rem', fontWeight: 900, background: 'transparent', border: '1px solid rgba(191, 149, 63, 0.4)', borderRadius: '24px', color: '#fff', cursor: 'pointer', letterSpacing: '2px', transition: 'all 0.3s' }}
+            style={{ width: '100%', padding: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '1rem', fontSize: '0.8rem', fontWeight: 900, background: 'rgba(0,0,0,0.4)', border: '1px solid rgba(191, 149, 63, 0.3)', borderRadius: '20px', color: '#fff', cursor: 'pointer', letterSpacing: '2px', transition: 'all 0.3s' }}
           >
-            <img src="https://www.google.com/favicon.ico" alt="Google" style={{ width: '20px', height: '20px', filter: 'brightness(2)' }} />
+            <img src="https://www.google.com/favicon.ico" alt="Google" style={{ width: '18px', height: '18px', filter: 'brightness(1.5)' }} />
             {loading ? 'SYNCHRONIZING...' : 'AUTHORIZE WITH GOOGLE'}
           </motion.button>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', opacity: 0.3 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', opacity: 0.2 }}>
             <div style={{ flex: 1, height: '1px', background: 'var(--gold-mid)' }} />
-            <ShieldCheck size={14} color="var(--gold-mid)" />
+            <ShieldCheck size={12} color="var(--gold-mid)" />
             <div style={{ flex: 1, height: '1px', background: 'var(--gold-mid)' }} />
           </div>
 
-          <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+          <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
             <div style={{ position: 'relative' }}>
-               <User size={16} style={{ position: 'absolute', left: '1.25rem', top: '50%', transform: 'translateY(-50%)', color: 'rgba(191,149,63,0.4)' }} />
+               <User size={14} style={{ position: 'absolute', left: '1.25rem', top: '50%', transform: 'translateY(-50%)', color: 'rgba(191,149,63,0.4)' }} />
                <input 
                 type="email"
                 required
                 placeholder="OPERATOR IDENTITY"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="gold-etched-input"
-                style={{ width: '100%', padding: '1.25rem 1.25rem 1.25rem 3rem', borderRadius: '20px', outline: 'none', fontWeight: 800, fontSize: '0.9rem', letterSpacing: '1px' }}
+                style={{ 
+                  width: '100%', 
+                  padding: '1.1rem 1.1rem 1.1rem 3rem', 
+                  borderRadius: '16px', 
+                  outline: 'none', 
+                  fontWeight: 800, 
+                  fontSize: '0.85rem', 
+                  letterSpacing: '1px',
+                  background: 'rgba(255,255,255,0.03)',
+                  border: '1px solid rgba(191, 149, 63, 0.1)',
+                  color: '#fff'
+                }}
               />
             </div>
             
             <div style={{ position: 'relative' }}>
-               <Lock size={16} style={{ position: 'absolute', left: '1.25rem', top: '50%', transform: 'translateY(-50%)', color: 'rgba(191,149,63,0.4)' }} />
+               <Lock size={14} style={{ position: 'absolute', left: '1.25rem', top: '50%', transform: 'translateY(-50%)', color: 'rgba(191,149,63,0.4)' }} />
                <input 
                 type="password"
                 required
                 placeholder="ENCRYPTION KEY"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="gold-etched-input"
-                style={{ width: '100%', padding: '1.25rem 1.25rem 1.25rem 3rem', borderRadius: '20px', outline: 'none', fontWeight: 800, fontSize: '0.9rem', letterSpacing: '1px' }}
+                style={{ 
+                  width: '100%', 
+                  padding: '1.1rem 1.1rem 1.1rem 3rem', 
+                  borderRadius: '16px', 
+                  outline: 'none', 
+                  fontWeight: 800, 
+                  fontSize: '0.85rem', 
+                  letterSpacing: '1px',
+                  background: 'rgba(255,155,255,0.03)',
+                  border: '1px solid rgba(191, 149, 63, 0.1)',
+                  color: '#fff'
+                }}
               />
             </div>
 
             <motion.button 
-              whileHover={{ scale: 1.03, boxShadow: '0 0 50px rgba(191, 149, 63, 0.5)' }}
-              whileTap={{ scale: 0.97 }}
+              whileHover={{ scale: 1.02, boxShadow: '0 0 40px rgba(191, 149, 63, 0.4)' }}
+              whileTap={{ scale: 0.98 }}
               type="submit" 
               disabled={loading} 
-              style={{ width: '100%', padding: '1.3rem', marginTop: '1.5rem', fontSize: '1rem', fontWeight: 900, background: 'var(--gold-gradient)', border: 'none', borderRadius: '24px', color: '#000', cursor: 'pointer', letterSpacing: '4px', textTransform: 'uppercase' }}
+              style={{ width: '100%', padding: '1.2rem', marginTop: '1rem', fontSize: '0.9rem', fontWeight: 900, background: 'var(--gold-gradient)', border: 'none', borderRadius: '18px', color: '#000', cursor: 'pointer', letterSpacing: '4px', textTransform: 'uppercase' }}
             >
               {loading ? 'AUTHORIZING...' : (isLogin ? 'ACCESS CORE' : 'INITIALIZE')}
             </motion.button>
@@ -191,7 +211,7 @@ export default function AuthScreen({ onClose }: { onClose?: () => void }) {
 
           <button 
             onClick={() => setIsLogin(!isLogin)}
-            style={{ background: 'transparent', border: 'none', color: 'var(--gold-mid)', fontSize: '0.75rem', fontWeight: 900, cursor: 'pointer', marginTop: '1.5rem', letterSpacing: '2px', opacity: 0.6 }}
+            style={{ background: 'transparent', border: 'none', color: 'var(--gold-mid)', fontSize: '0.7rem', fontWeight: 900, cursor: 'pointer', marginTop: '1rem', letterSpacing: '2px', opacity: 0.5 }}
           >
             {isLogin ? "NEW COMMANDER? INITIALIZE ACCESS" : "KNOWN OPERATOR? ACCESS CORE"}
           </button>
