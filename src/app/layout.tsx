@@ -10,8 +10,8 @@ export const metadata: Metadata = {
   description: "Tactical high-end AI power center. Experience the absolute peak of AI intelligence and multimedia sovereignty.",
   manifest: "/manifest.json",
   icons: {
-    icon: "/lion-core.png",
-    apple: "/lion-core.png",
+    icon: "/favicon.png",
+    apple: "/favicon.png",
   },
   openGraph: {
     title: "JLR AI SUPREMACY | NEURAL COGNITION",
@@ -64,9 +64,9 @@ export default function RootLayout({
         <meta itemProp="image" content="https://jlr-omega.vercel.app/metaforjlr.png?v=3" />
         <link rel="image_src" href="https://jlr-omega.vercel.app/metaforjlr.png?v=3" />
         
-        <link rel="icon" href="/lion-core.png?v=2" />
-        <link rel="apple-touch-icon" href="/lion-core.png?v=2" />
-        <link rel="shortcut icon" href="/lion-core.png?v=2" />
+        <link rel="icon" href="/favicon.png?v=4" />
+        <link rel="apple-touch-icon" href="/favicon.png?v=4" />
+        <link rel="shortcut icon" href="/favicon.png?v=4" />
       </head>
       <body className={inter.className}>
         <AuthProvider>
