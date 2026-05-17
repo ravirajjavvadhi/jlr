@@ -82,7 +82,7 @@ async function callGemini(apiKey: string, modelId: string, messages: any[], stre
         body: JSON.stringify({
             contents,
             ...(systemInstruction && { systemInstruction }),
-            generationConfig: { maxOutputTokens: 16384, temperature: 0.7 }
+            generationConfig: { maxOutputTokens: 12288, temperature: 0.7 }
         })
     });
 }
@@ -390,7 +390,7 @@ You are JLR AI (Supreme Edition). Your signature is absolute technical authority
                    ]
                  }],
                  systemInstruction: { parts: [{ text: content }] },
-                 generationConfig: { temperature: 0.2, maxOutputTokens: 16384 }
+                 generationConfig: { temperature: 0.2, maxOutputTokens: 12288 }
                })
              });
 
@@ -507,7 +507,7 @@ You are JLR AI (Supreme Edition). Your signature is absolute technical authority
                   model: mappedModel, 
                   messages: cleanMessages(finalMessages), 
                   stream: true, 
-                  max_tokens: 16384 
+                  max_tokens: 12288 
                 }),
               });
               
