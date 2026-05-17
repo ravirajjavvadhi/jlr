@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import connectToDatabase from '@/services/mongodb';
 import User from '@/models/User';
 
-export const maxDuration = 60;
+export const maxDuration = 300; // Increased to allow long-running generations
 
 const GROQ_BASE_URL = 'https://api.groq.com/openai/v1';
 const OPENROUTER_BASE_URL = 'https://openrouter.ai/api/v1';
@@ -82,7 +82,7 @@ async function callGemini(apiKey: string, modelId: string, messages: any[], stre
         body: JSON.stringify({
             contents,
             ...(systemInstruction && { systemInstruction }),
-            generationConfig: { maxOutputTokens: 8192, temperature: 0.7 }
+            generationConfig: { maxOutputTokens: 16384, temperature: 0.7 }
         })
     });
 }
@@ -390,7 +390,7 @@ You are JLR AI (Supreme Edition). Your signature is absolute technical authority
                    ]
                  }],
                  systemInstruction: { parts: [{ text: content }] },
-                 generationConfig: { temperature: 0.2, maxOutputTokens: 8192 }
+                 generationConfig: { temperature: 0.2, maxOutputTokens: 16384 }
                })
              });
 
@@ -507,7 +507,7 @@ You are JLR AI (Supreme Edition). Your signature is absolute technical authority
                   model: mappedModel, 
                   messages: cleanMessages(finalMessages), 
                   stream: true, 
-                  max_tokens: 8192 
+                  max_tokens: 16384 
                 }),
               });
               

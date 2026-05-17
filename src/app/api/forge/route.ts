@@ -36,7 +36,8 @@ You are the JLR Sovereign Forge Core. Your sole purpose is to architect and synt
           { role: 'system', content: systemInstruction },
           ...messages
         ],
-        stream: true
+        stream: true,
+        max_tokens: 16384
       }),
     });
 
