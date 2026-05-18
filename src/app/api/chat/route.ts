@@ -287,6 +287,7 @@ You are JLR AI (Supreme Edition). Your signature is absolute technical authority
     let orKeysRaw = process.env.OPENROUTER_API_KEY || process.env.NEXT_PUBLIC_OPENROUTER_API_KEY || '';
     let geminiKeysRaw = process.env.GEMINI_API_KEY || process.env.NEXT_PUBLIC_GEMINI_API_KEY || '';
 
+    // [SOVEREIGN KEY VAULT]: Resolve Master Keys + Per-User Keys (MUST connect to DB first)
     try {
       await connectToDatabase();
       const SystemConfigModel = (await import('@/models/SystemConfig')).default;
@@ -319,9 +320,12 @@ You are JLR AI (Supreme Edition). Your signature is absolute technical authority
       console.error('[KEY-VAULT ERROR]:', e);
     }
 
-    const groqKeys = groqKeysRaw.split(',').map(k => k.trim()).filter(k => k);
-    const orKeys = orKeysRaw.split(',').map(k => k.trim()).filter(k => k);
-    const geminiKeys = geminiKeysRaw.split(',').map(k => k.trim()).filter(k => k);
+    // [SOVEREIGN SPLITTING]: Handle commas, newlines, and spaces for robust key pooling
+    const splitKeys = (raw: string) => raw.split(/[,\s\n]+/).map(k => k.trim()).filter(k => k && k.length > 10);
+    
+    const groqKeys = splitKeys(groqKeysRaw);
+    const orKeys = splitKeys(orKeysRaw);
+    const geminiKeys = splitKeys(geminiKeysRaw);
 
     const encoder = new TextEncoder();
     const stream = new ReadableStream({
@@ -445,14 +449,19 @@ You are JLR AI (Supreme Edition). Your signature is absolute technical authority
 
         let activeKeys = (streamProvider === 'gemini' ? geminiKeys : (streamProvider === 'openrouter' ? orKeys : groqKeys));
         
-        // [GROQ PRIORITIZATION]: If we are in general chat, force Groq keys if they exist at all
+        // [GROQ SUPREMACY]: If no vision content, FORCE Groq if we have keys. 
+        // This prevents unwanted fallbacks to credit-sensitive providers for general chat.
         if (!hasVisionContent && groqKeys.length > 0) {
             streamProvider = 'groq';
             activeKeys = groqKeys;
+            // Ensure model is compatible with Groq if we forced the provider
+            if (!streamModel.includes('llama')) {
+                streamModel = 'llama-3.3-70b-versatile';
+            }
         }
 
-        // [CRITICAL OPTIMIZATION]: Try every key once, with a hard cap to avoid hanging.
-        const maxAttempts = Math.min(Math.max(activeKeys.length, 3), 20);
+        // [CRITICAL OPTIMIZATION]: Try every key once, with a hard cap of 30.
+        const maxAttempts = Math.min(Math.max(activeKeys.length, 5), 30);
         let attempts = 0;
         let success = false;
         let lastErrorMsg = 'All Neural Nodes Exhausted';
@@ -548,18 +557,30 @@ You are JLR AI (Supreme Edition). Your signature is absolute technical authority
                 const isSaturated = status === 429 || msg.toLowerCase().includes('rate limit') || status >= 500;
                 
                 if (isAuthError || isSaturated || status === 402) {
-                   if (attempts > 0 && attempts % activeKeys.length === 0) {
-                     if (streamProvider === 'openrouter') {
-                       streamProvider = 'gemini';
-                       streamModel = 'gemini-2.0-flash';
-                     } else {
-                       streamProvider = 'openrouter';
-                       streamModel = hasVisionContent ? 'qwen/qwen-2.5-vl-72b-instruct' : 'meta-llama/llama-3.3-70b-instruct';
-                     }
-                   }
-                   attempts++;
-                   await new Promise(r => setTimeout(r, 100));
-                   continue;
+                    // [STRICT FALLBACK]: Only switch providers for vision content. 
+                    // For text tasks, we cycle through ALL keys of the current provider.
+                    if (attempts > 0 && (attempts + 1) % activeKeys.length === 0) {
+                        if (hasVisionContent) {
+                            if (streamProvider === 'openrouter') {
+                                streamProvider = 'gemini';
+                                streamModel = 'gemini-2.0-flash';
+                            } else {
+                                streamProvider = 'openrouter';
+                                streamModel = 'qwen/qwen-2.5-vl-72b-instruct';
+                            }
+                            attempts = 0; // Restart loop for new provider
+                        } else {
+                            // For general chat, we ALREADY tried all keys for this provider.
+                            // If it's Groq, we STOP here to prevent billing surprises on OpenRouter.
+                            if (streamProvider === 'groq') {
+                                success = false;
+                                break; 
+                            }
+                        }
+                    }
+                    await new Promise(r => setTimeout(r, 100));
+                    attempts++;
+                    continue;
                 } else {
                    break; // Fatal error or bad request
                 }
