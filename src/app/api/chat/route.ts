@@ -558,7 +558,9 @@ You are JLR AI (Supreme Edition). Your signature is absolute technical authority
            let safeError = lastErrorMsg;
            const lowerErr = lastErrorMsg.toLowerCase();
            const isBillingError = lowerErr.includes('billing') || lowerErr.includes('credit') || lowerErr.includes('balance') || lowerErr.includes('insufficient funds');
-           if (!isBillingError && (lowerErr.includes('rate limit') || lowerErr.includes('429') || lowerErr.includes('console.groq.com'))) {
+           if (isBillingError) {
+               safeError = 'JLR Sovereign Neural-Bandwidth is exhausted. Supreme Commander synchronization required to restore the link.';
+           } else if (lowerErr.includes('rate limit') || lowerErr.includes('429') || lowerErr.includes('console.groq.com')) {
                safeError = 'JLR Sovereign Servers are currently experiencing maximum computational load. Neural bandwidth is saturated. Please try again in 1-2 minutes.';
            } else if (lowerErr.includes('decommissioned') || lowerErr.includes('unsupported')) {
                safeError = 'The requested Neural Node has been decommissioned by JLR Central. Please try another model.';
