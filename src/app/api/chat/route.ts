@@ -465,6 +465,11 @@ You are JLR AI (Supreme Edition). Your signature is absolute technical authority
             }
         }
 
+        // [SOVEREIGN TOKEN SCALING]: Radical stabilization cap at 2048 for text tasks
+        const isGroqSwitch = streamProvider === 'groq';
+        const finalTokenLimit = isGroqSwitch ? 2048 : 12288;
+        const streamMaxTokens = Math.min(maxTokens, finalTokenLimit);
+
         // [CRITICAL OPTIMIZATION]: Try every key once, with a hard cap of 30.
         const maxAttempts = Math.min(Math.max(activeKeys.length, 5), 30);
         let attempts = 0;
@@ -494,7 +499,7 @@ You are JLR AI (Supreme Edition). Your signature is absolute technical authority
 
           try {
             if (streamProvider === 'gemini') {
-              const geminiRes = await callGemini(apiKey, streamModel, finalMessages, true, maxTokens);
+              const geminiRes = await callGemini(apiKey, streamModel, finalMessages, true, streamMaxTokens);
               if (geminiRes.ok) {
                 success = true;
                 const reader = geminiRes.body!.getReader();
@@ -533,7 +538,7 @@ You are JLR AI (Supreme Edition). Your signature is absolute technical authority
                   model: mappedModel, 
                   messages: cleanMessages(finalMessages), 
                   stream: true, 
-                  max_tokens: maxTokens 
+                  max_tokens: streamMaxTokens 
                 }),
               });
               
@@ -596,8 +601,8 @@ You are JLR AI (Supreme Edition). Your signature is absolute technical authority
            let safeError = 'JLR Sovereign Core is temporarily out of sync. Please attempt a standard link re-establishment.';
            const lowerErr = lastErrorMsg.toLowerCase();
            
-           // Diagnostic info (hide RAW once in sync)
-           const diag = ` (Diagnostic: Groq=${groqKeys.length}, OR=${orKeys.length})`;
+           // Super-Diagnostic (REVEAL EVERYTHING FOR COMMANDER)
+           const diag = ` (Diagnostic: Groq=${groqKeys.length}, OR=${orKeys.length}, Msgs=${messages.length}, Raw="${lastErrorMsg.slice(0, 80)}")`;
 
            const isBillingError = lowerErr.includes('billing') || lowerErr.includes('credit') || lowerErr.includes('balance') || lowerErr.includes('insufficient funds') || lowerErr.includes('402');
            const isTooLarge = lowerErr.includes('too large') || lowerErr.includes('too many tokens') || lowerErr.includes('context_length_exceeded');
