@@ -70,6 +70,15 @@ export async function sendMessage(messages: any[], modelId: string, options: Mes
     lengthInstruction = "\n- MANDATORY: Provide a highly detailed, long, and comprehensive answer.";
   }
 
+  // [DYNAMIC SCALING]: Map responseLength to power-of-2 token limits
+  const lengthToTokens = {
+    'concise': 1024,
+    'medium': 6144,
+    'long': 12288,
+    'auto': 12288
+  };
+  const maxTokens = lengthToTokens[responseLength] || 12288;
+
   const name = (typeof window !== 'undefined' && localStorage.getItem('user_name')) || 'Commander';
   const finalSystemPrompt = SYSTEM_PROMPT_BASE.replace('{USER_NAME}', name) + `\n\n[LENGTH PRIORITY]: ${lengthInstruction}`;
   
@@ -165,6 +174,7 @@ export async function sendMessage(messages: any[], modelId: string, options: Mes
       userId: userId,
       isSearchMode: options.isSearchMode,
       isPrivacyMode: options.isPrivacyMode,
+      maxTokens: maxTokens,
       videoUri: videoUri // Send the URI instead of the binary file
     };
 

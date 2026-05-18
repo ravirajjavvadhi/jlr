@@ -36,7 +36,7 @@ function cleanMessages(messages: any[]): any[] {
 }
 
 // [GEMINI HANDLER]: Native Gemini API call (not OpenAI-compatible)
-async function callGemini(apiKey: string, modelId: string, messages: any[], stream: boolean): Promise<Response> {
+async function callGemini(apiKey: string, modelId: string, messages: any[], stream: boolean, maxTokens: number = 8192): Promise<Response> {
     // Convert OpenAI message format to Gemini format
     const contents: any[] = [];
     for (const msg of messages) {
@@ -82,7 +82,7 @@ async function callGemini(apiKey: string, modelId: string, messages: any[], stre
         body: JSON.stringify({
             contents,
             ...(systemInstruction && { systemInstruction }),
-            generationConfig: { maxOutputTokens: 12288, temperature: 0.7 }
+            generationConfig: { maxOutputTokens: maxTokens, temperature: 0.7 }
         })
     });
 }
@@ -233,7 +233,8 @@ export async function POST(req: NextRequest) {
       rawBody = await req.json();
     }
 
-    const { messages, model, provider, fileContext, userId, isSearchMode, isPrivacyMode, videoUri } = rawBody;
+    const { messages, model, provider, fileContext, userId, isSearchMode, isPrivacyMode, videoUri, maxTokens: requestedMaxTokens } = rawBody;
+    const maxTokens = requestedMaxTokens || 12288;
 
 
     // Build current IST date string
@@ -390,7 +391,7 @@ You are JLR AI (Supreme Edition). Your signature is absolute technical authority
                    ]
                  }],
                  systemInstruction: { parts: [{ text: content }] },
-                 generationConfig: { temperature: 0.2, maxOutputTokens: 12288 }
+                 generationConfig: { temperature: 0.2, maxOutputTokens: maxTokens }
                })
              });
 
@@ -468,7 +469,7 @@ You are JLR AI (Supreme Edition). Your signature is absolute technical authority
 
           try {
             if (streamProvider === 'gemini') {
-              const geminiRes = await callGemini(apiKey, streamModel, finalMessages, true);
+              const geminiRes = await callGemini(apiKey, streamModel, finalMessages, true, maxTokens);
               if (geminiRes.ok) {
                 success = true;
                 const reader = geminiRes.body!.getReader();
@@ -507,7 +508,7 @@ You are JLR AI (Supreme Edition). Your signature is absolute technical authority
                   model: mappedModel, 
                   messages: cleanMessages(finalMessages), 
                   stream: true, 
-                  max_tokens: 12288 
+                  max_tokens: maxTokens 
                 }),
               });
               
@@ -556,7 +557,8 @@ You are JLR AI (Supreme Edition). Your signature is absolute technical authority
         if (!success) {
            let safeError = lastErrorMsg;
            const lowerErr = lastErrorMsg.toLowerCase();
-           if (lowerErr.includes('rate limit') || lowerErr.includes('429') || lowerErr.includes('console.groq.com') || lowerErr.includes('billing')) {
+           const isBillingError = lowerErr.includes('billing') || lowerErr.includes('credit') || lowerErr.includes('balance') || lowerErr.includes('insufficient funds');
+           if (!isBillingError && (lowerErr.includes('rate limit') || lowerErr.includes('429') || lowerErr.includes('console.groq.com'))) {
                safeError = 'JLR Sovereign Servers are currently experiencing maximum computational load. Neural bandwidth is saturated. Please try again in 1-2 minutes.';
            } else if (lowerErr.includes('decommissioned') || lowerErr.includes('unsupported')) {
                safeError = 'The requested Neural Node has been decommissioned by JLR Central. Please try another model.';
