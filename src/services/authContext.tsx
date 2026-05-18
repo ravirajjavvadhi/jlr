@@ -281,12 +281,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const updateChatMessages = async (chatId: string, messages: any[]) => {
     setChats(prev => {
-      const updated = prev.map(c => c.id === chatId ? { ...c, messages, updatedAt: Date.now() } : c);
+      let chatExists = prev.some(c => c.id === chatId);
+      let updated;
+      
+      if (chatExists) {
+        updated = prev.map(c => c.id === chatId ? { ...c, messages, updatedAt: Date.now() } : c);
+      } else {
+        // [SOVEREIGN UPSERT]: If the chat doesn't exist (created on-the-fly), inject it immediately
+        const newChat: Chat = {
+          id: chatId,
+          title: 'New Power Session',
+          messages: messages,
+          model: 'JLR-SUPREME-ULTRA',
+          updatedAt: Date.now()
+        };
+        updated = [newChat, ...prev];
+      }
+
       saveLocalChats(updated, user?.id);
       
       if (user && !user.isGuest) {
         const activeChat = updated.find(c => c.id === chatId);
-        // [SOVEREIGN CLOUD SYNC]: Ensure every state change is mirrored with high priority
         if (activeChat) {
           fetch('/api/db/chats', {
             method: 'POST',
