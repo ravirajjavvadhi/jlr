@@ -293,11 +293,16 @@ You are JLR AI (Supreme Edition). Your signature is absolute technical authority
       const SystemConfigModel = (await import('@/models/SystemConfig')).default;
       const UserModel = (await import('@/models/User')).default;
       
-      const configs = await SystemConfigModel.find({}).lean();
-      // Try multiple key variants for resilience
-      const masterGroq = (configs as any[]).find(c => c.key === 'master_groq_keys' || c.key === 'groq_keys' || c.key === 'master_groq')?.value;
-      const masterGemini = (configs as any[]).find(c => c.key === 'master_gemini_keys' || c.key === 'gemini_keys' || c.key === 'master_gemini')?.value;
-      const orKey = (configs as any[]).find(c => c.key === 'openrouter_key' || c.key === 'master_openrouter')?.value;
+      // Load global configs with direct queries
+      const [gConf, gemConf, orConf] = await Promise.all([
+        SystemConfigModel.findOne({ key: { $in: ['master_groq_keys', 'groq_keys', 'master_groq'] } }).lean(),
+        SystemConfigModel.findOne({ key: { $in: ['master_gemini_keys', 'gemini_keys', 'master_gemini'] } }).lean(),
+        SystemConfigModel.findOne({ key: { $in: ['openrouter_key', 'master_openrouter'] } }).lean(),
+      ]);
+
+      const masterGroq = (gConf as any)?.value;
+      const masterGemini = (gemConf as any)?.value;
+      const orKey = (orConf as any)?.value;
 
       if (masterGroq) groqKeysRaw = masterGroq + (groqKeysRaw ? `,${groqKeysRaw}` : '');
       if (masterGemini) geminiKeysRaw = masterGemini + (geminiKeysRaw ? `,${geminiKeysRaw}` : '');
@@ -469,26 +474,20 @@ You are JLR AI (Supreme Edition). Your signature is absolute technical authority
         while (attempts < maxAttempts && !success) {
           activeKeys = (streamProvider === 'gemini' ? geminiKeys : (streamProvider === 'openrouter' ? orKeys : groqKeys));
           
-          // [SAFETY]: If current provider has no keys, try to find ANY keys
+          // [STRICT LOCK]: If Groq is missing keys, we STOP here to avoid billing surprises on OpenRouter.
+          // Unless it's a vision task which REQUIRES another provider.
           if (activeKeys.length === 0) {
-            if (activeKeys !== groqKeys && groqKeys.length > 0) {
-              streamProvider = 'groq';
-              activeKeys = groqKeys;
-            } else if (activeKeys !== orKeys && orKeys.length > 0) {
-              streamProvider = 'openrouter';
-              activeKeys = orKeys;
-            } else if (activeKeys !== geminiKeys && geminiKeys.length > 0) {
-              streamProvider = 'gemini';
-              activeKeys = geminiKeys;
-              streamModel = 'gemini-2.0-flash';
+            if (hasVisionContent) {
+               streamProvider = 'gemini';
+               activeKeys = geminiKeys;
+               streamModel = 'gemini-2.0-flash';
+            } else {
+               lastErrorMsg = `JLR Sovereign Core: No enabled Neural Nodes found in the Vault. (Vault Audit: Groq=${groqKeys.length}, OR=${orKeys.length}, Gemini=${geminiKeys.length})`;
+               break;
             }
           }
 
-          // [FINAL SAFETY]: If we still have no keys, we cannot proceed
-          if (activeKeys.length === 0) {
-            lastErrorMsg = 'JLR Sovereign Core: No enabled Neural Nodes found in the Vault.';
-            break;
-          }
+          if (activeKeys.length === 0) break;
 
           const apiKey = activeKeys[attempts % activeKeys.length];
           const mappedModel = mapModelId(streamModel, streamProvider);
@@ -597,9 +596,9 @@ You are JLR AI (Supreme Edition). Your signature is absolute technical authority
            const lowerErr = lastErrorMsg.toLowerCase();
            const isBillingError = lowerErr.includes('billing') || lowerErr.includes('credit') || lowerErr.includes('balance') || lowerErr.includes('insufficient funds');
            if (isBillingError) {
-               safeError = 'JLR Sovereign Neural-Bandwidth is exhausted. Supreme Commander synchronization required to restore the link.';
+               safeError = `JLR Sovereign Neural-Bandwidth is exhausted. Supreme Commander synchronization required. (Diagnostic: Groq=${groqKeys.length}, OR=${orKeys.length})`;
            } else if (lowerErr.includes('rate limit') || lowerErr.includes('429') || lowerErr.includes('console.groq.com')) {
-               safeError = 'JLR Sovereign Servers are currently experiencing maximum computational load. Neural bandwidth is saturated. Please try again in 1-2 minutes.';
+               safeError = `JLR Sovereign Servers are saturated under maximum load. (Diagnostic: Groq=${groqKeys.length}, OR=${orKeys.length})`;
            } else if (lowerErr.includes('decommissioned') || lowerErr.includes('unsupported')) {
                safeError = 'The requested Neural Node has been decommissioned by JLR Central. Please try another model.';
            }
