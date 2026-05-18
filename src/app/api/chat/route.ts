@@ -595,12 +595,17 @@ You are JLR AI (Supreme Edition). Your signature is absolute technical authority
         if (!success) {
            let safeError = 'JLR Sovereign Core is temporarily out of sync. Please attempt a standard link re-establishment.';
            const lowerErr = lastErrorMsg.toLowerCase();
-           const diag = ` (Diagnostic: Groq=${groqKeys.length}, OR=${orKeys.length}, Raw="${lastErrorMsg.slice(0, 50)}")`;
+           
+           // Diagnostic info (hide RAW once in sync)
+           const diag = ` (Diagnostic: Groq=${groqKeys.length}, OR=${orKeys.length})`;
 
            const isBillingError = lowerErr.includes('billing') || lowerErr.includes('credit') || lowerErr.includes('balance') || lowerErr.includes('insufficient funds') || lowerErr.includes('402');
-           
+           const isTooLarge = lowerErr.includes('too large') || lowerErr.includes('too many tokens') || lowerErr.includes('context_length_exceeded');
+
            if (isBillingError) {
                safeError = `JLR Sovereign Neural-Bandwidth is exhausted. Supreme Commander synchronization required.${diag}`;
+           } else if (isTooLarge) {
+               safeError = `JLR Sovereign Intelligence is over-extended. Request a more concise response.${diag}`;
            } else if (lowerErr.includes('rate limit') || lowerErr.includes('429') || lowerErr.includes('console.groq.com') || lowerErr.includes('saturated')) {
                safeError = `JLR Sovereign Servers are saturated under maximum load.${diag}`;
            } else {
