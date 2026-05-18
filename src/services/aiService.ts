@@ -121,7 +121,7 @@ export async function sendMessage(messages: any[], modelId: string, options: Mes
     finalModelId = 'deepseek/deepseek-chat'; 
   } else {
     const isGroqModel = modelId.includes('versatile') || modelId.includes('instant');
-    finalProvider = ((isGroqModel && groqKey) ? 'groq' : (orKey ? 'openrouter' : 'groq'));
+    finalProvider = (isGroqModel ? 'groq' : (orKey ? 'openrouter' : 'groq'));
   }
 
   try {
