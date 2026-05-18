@@ -591,19 +591,25 @@ You are JLR AI (Supreme Edition). Your signature is absolute technical authority
           }
         }
 
+        // Final Error Branding (Sovereign Neural Persona)
         if (!success) {
-           let safeError = lastErrorMsg;
+           let safeError = 'JLR Sovereign Core is temporarily out of sync. Please attempt a standard link re-establishment.';
            const lowerErr = lastErrorMsg.toLowerCase();
-           const isBillingError = lowerErr.includes('billing') || lowerErr.includes('credit') || lowerErr.includes('balance') || lowerErr.includes('insufficient funds');
+           const diag = ` (Diagnostic: Groq=${groqKeys.length}, OR=${orKeys.length}, Raw="${lastErrorMsg.slice(0, 50)}")`;
+
+           const isBillingError = lowerErr.includes('billing') || lowerErr.includes('credit') || lowerErr.includes('balance') || lowerErr.includes('insufficient funds') || lowerErr.includes('402');
+           
            if (isBillingError) {
-               safeError = `JLR Sovereign Neural-Bandwidth is exhausted. Supreme Commander synchronization required. (Diagnostic: Groq=${groqKeys.length}, OR=${orKeys.length})`;
-           } else if (lowerErr.includes('rate limit') || lowerErr.includes('429') || lowerErr.includes('console.groq.com')) {
-               safeError = `JLR Sovereign Servers are saturated under maximum load. (Diagnostic: Groq=${groqKeys.length}, OR=${orKeys.length})`;
-           } else if (lowerErr.includes('decommissioned') || lowerErr.includes('unsupported')) {
-               safeError = 'The requested Neural Node has been decommissioned by JLR Central. Please try another model.';
+               safeError = `JLR Sovereign Neural-Bandwidth is exhausted. Supreme Commander synchronization required.${diag}`;
+           } else if (lowerErr.includes('rate limit') || lowerErr.includes('429') || lowerErr.includes('console.groq.com') || lowerErr.includes('saturated')) {
+               safeError = `JLR Sovereign Servers are saturated under maximum load.${diag}`;
+           } else {
+               safeError = `JLR Sovereign Neural-Link failed. Standard fallback protocols exhausted.${diag}`;
            }
            
-           controller.enqueue(encoder.encode(`data: ${JSON.stringify({ choices: [{ delta: { content: `⚠️ Technical Diagnostic: ${safeError}` } }] })}\n\n`));
+           controller.enqueue(encoder.encode(`data: ${JSON.stringify({ error: safeError, choices: [{ delta: { content: `\n\n⚠️ ${safeError}` } }] })}\n\n`));
+           controller.close();
+           return;
         }
 
         controller.enqueue(encoder.encode(`data: [DONE]\n\n`));
