@@ -42,19 +42,27 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 
 // ─── Namespaced Local Storage helpers ─────────────────────────────────────────
+function getStorage(userId?: string) {
+  if (typeof window === 'undefined') return null;
+  // [GUEST VOLATILITY]: Use sessionStorage for guests, localStorage for members
+  return (!userId || userId === 'guest') ? window.sessionStorage : window.localStorage;
+}
+
 function getStorageKey(userId?: string) {
-  return userId ? `supremacy_chats_${userId}` : 'supremacy_chats_guest';
+  return userId && userId !== 'guest' ? `supremacy_chats_${userId}` : 'supremacy_chats_guest';
 }
 
 function loadLocalChats(userId?: string): Chat[] {
-  if (typeof window === 'undefined') return [];
+  const s = getStorage(userId);
+  if (!s) return [];
   try { 
-    return JSON.parse(localStorage.getItem(getStorageKey(userId)) || '[]'); 
+    return JSON.parse(s.getItem(getStorageKey(userId)) || '[]'); 
   } catch { return []; }
 }
 
 function saveLocalChats(chats: Chat[], userId?: string) {
-  localStorage.setItem(getStorageKey(userId), JSON.stringify(chats));
+  const s = getStorage(userId);
+  if (s) s.setItem(getStorageKey(userId), JSON.stringify(chats));
 }
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -278,7 +286,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       if (user && !user.isGuest) {
         const activeChat = updated.find(c => c.id === chatId);
-        if (activeChat && activeChat.messages.length > 0) {
+        // [SOVEREIGN CLOUD SYNC]: Ensure every state change is mirrored with high priority
+        if (activeChat) {
           fetch('/api/db/chats', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },

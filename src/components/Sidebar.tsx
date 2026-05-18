@@ -146,7 +146,7 @@ const Sidebar: React.FC<SidebarProps> = ({
       </div>
       
       {/* History Section */}
-      <div style={{ flex: 1, overflowY: 'auto', paddingRight: '4px' }}>
+      <div style={{ flex: 1, overflowY: 'auto', paddingRight: '4px', scrollbarWidth: 'thin', scrollbarColor: 'rgba(255,255,255,0.1) transparent' }}>
         <p style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.25)', textTransform: 'uppercase', marginBottom: '1rem', fontWeight: 900, letterSpacing: '2px' }}>Neural Archive</p>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
           {chats.filter(c => c.messages.length > 0 || c.id === currentChatId).map(chat => (

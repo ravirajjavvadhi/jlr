@@ -174,9 +174,11 @@ Requirements:
 - No "Title:".
 - Max 5 words.`;
 
-      await sendMessage([{ role: 'user', content: prompt }], 'llama-3.1-8b-instant', {
+      const modelForTitle = 'llama-3.3-70b-versatile';
+      
+      await sendMessage([{ role: 'user', content: prompt }], modelForTitle, {
         onDone: (title) => {
-          const cleanTitle = title.trim().replace(/^"|"$/g, '').replace(/^Title:\s*/i, '');
+          const cleanTitle = title.trim().replace(/^"|"$/g, '').replace(/^Title:\s*/i, '').replace(/^Name:\s*/i, '');
           if (cleanTitle && cleanTitle.length < 60) {
             renameChat(chatId, cleanTitle);
           }
