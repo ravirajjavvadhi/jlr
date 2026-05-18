@@ -282,32 +282,38 @@ You are JLR AI (Supreme Edition). Your signature is absolute technical authority
     // [INTELLIGENCE TOGGLE]: Only research if Commander explicitly activates High-Intel mode
     const isSearchIntent = isSearchMode; // Removed auto-detection to favor Lightning Speed as requested
 
-    // [KEY POOL]: Parse all keys (env fallback)
-    let groqKeysRaw = process.env.GROQ_API_KEY || process.env.NEXT_PUBLIC_GROQ_API_KEY || '';
-    let orKeysRaw = process.env.OPENROUTER_API_KEY || process.env.NEXT_PUBLIC_OPENROUTER_API_KEY || '';
-    let geminiKeysRaw = process.env.GEMINI_API_KEY || process.env.NEXT_PUBLIC_GEMINI_API_KEY || '';
+    // Load keys from Database (Sovereign Vault)
+    let groqKeysRaw = process.env.GROQ_API_KEY || '';
+    let orKeysRaw = process.env.OPENROUTER_API_KEY || '';
+    let geminiKeysRaw = process.env.GEMINI_API_KEY || '';
 
-    // [SOVEREIGN KEY VAULT]: Resolve Master Keys + Per-User Keys (MUST connect to DB first)
     try {
       await connectToDatabase();
       const SystemConfig = (await import('@/models/SystemConfig')).default;
-      const [configs, userDoc] = await Promise.all([
-        SystemConfig.find({}).lean(),
-        userId ? User.findById(userId).lean() : Promise.resolve(null),
-      ]);
-
-      // Global keys from admin panel
+      
+      // Load global configs first (independent of user)
+      const configs = await SystemConfig.find({}).lean();
       const masterGroq = (configs as any[]).find(c => c.key === 'master_groq_keys')?.value;
       const masterGemini = (configs as any[]).find(c => c.key === 'master_gemini_keys')?.value;
+      const orKey = (configs as any[]).find(c => c.key === 'openrouter_key')?.value;
+
       if (masterGroq) groqKeysRaw = masterGroq + (groqKeysRaw ? `,${groqKeysRaw}` : '');
       if (masterGemini) geminiKeysRaw = masterGemini + (geminiKeysRaw ? `,${geminiKeysRaw}` : '');
+      if (orKey) orKeysRaw = orKey + (orKeysRaw ? `,${orKeysRaw}` : '');
 
-      // Per-user keys injected by admin panel
-      if (userDoc) {
-        const userGroqRaw = (userDoc as any).custom_api_key || '';
-        const userGeminiArr: string[] = (userDoc as any).gemini_api_keys || [];
-        if (userGroqRaw) groqKeysRaw = userGroqRaw + (groqKeysRaw ? `,${groqKeysRaw}` : '');
-        if (userGeminiArr.length > 0) geminiKeysRaw = userGeminiArr.join(',') + (geminiKeysRaw ? `,${geminiKeysRaw}` : '');
+      // Load user-specific keys safely
+      if (userId && userId !== 'guest' && userId.length === 24) { 
+        try {
+          const userDoc = await User.findById(userId).lean();
+          if (userDoc) {
+            const userGroqRaw = (userDoc as any).custom_api_key || '';
+            const userGeminiArr: string[] = (userDoc as any).gemini_api_keys || [];
+            if (userGroqRaw) groqKeysRaw = userGroqRaw + (groqKeysRaw ? `,${groqKeysRaw}` : '');
+            if (userGeminiArr.length > 0) geminiKeysRaw = userGeminiArr.join(',') + (geminiKeysRaw ? `,${geminiKeysRaw}` : '');
+          }
+        } catch (uErr) {
+          console.warn('[USER-KEY ERROR]: Invalid user lookup', uErr);
+        }
       }
     } catch (e) {
       console.error('[KEY-VAULT ERROR]:', e);
@@ -452,19 +458,28 @@ You are JLR AI (Supreme Edition). Your signature is absolute technical authority
         while (attempts < maxAttempts && !success) {
           activeKeys = (streamProvider === 'gemini' ? geminiKeys : (streamProvider === 'openrouter' ? orKeys : groqKeys));
           
-          // [CRITICAL FIX]: Groq has NO vision models. Force Gemini if OR has no keys for vision.
-          if (activeKeys.length === 0 && hasVisionContent) {
-             streamProvider = 'gemini';
-             activeKeys = geminiKeys;
-             streamModel = 'gemini-2.0-flash';
-          }
-          
+          // [SAFETY]: If current provider has no keys, try to find ANY keys
           if (activeKeys.length === 0) {
-            streamProvider = 'groq';
-            activeKeys = groqKeys;
+            if (activeKeys !== groqKeys && groqKeys.length > 0) {
+              streamProvider = 'groq';
+              activeKeys = groqKeys;
+            } else if (activeKeys !== orKeys && orKeys.length > 0) {
+              streamProvider = 'openrouter';
+              activeKeys = orKeys;
+            } else if (activeKeys !== geminiKeys && geminiKeys.length > 0) {
+              streamProvider = 'gemini';
+              activeKeys = geminiKeys;
+              streamModel = 'gemini-2.0-flash';
+            }
           }
 
-          const apiKey = activeKeys[attempts % activeKeys.length] || '';
+          // [FINAL SAFETY]: If we still have no keys, we cannot proceed
+          if (activeKeys.length === 0) {
+            lastErrorMsg = 'JLR Sovereign Core: No enabled Neural Nodes found in the Vault.';
+            break;
+          }
+
+          const apiKey = activeKeys[attempts % activeKeys.length];
           const mappedModel = mapModelId(streamModel, streamProvider);
 
           try {
