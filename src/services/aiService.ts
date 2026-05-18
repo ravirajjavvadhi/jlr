@@ -108,18 +108,16 @@ export async function sendMessage(messages: any[], modelId: string, options: Mes
   // Look at the CURRENT query for images
   const currentMsg = prunedMessages[prunedMessages.length - 1];
   const hasImages = currentMsg && Array.isArray(currentMsg.content) && currentMsg.content.some((c: any) => typeof c === 'object' && c.type === 'image_url');
-  const hasComplexDocs = !!fileContext || messages.some(m => m.attachments?.length > 0);
   
   let finalModelId = modelId;
   let finalProvider = '';
 
   if (hasImages) {
+    // [VISION PIPELINE]: Force vision-capable nodes for image content
     finalProvider = 'openrouter';
     finalModelId = 'qwen/qwen-2.5-vl-72b-instruct';
-  } else if (hasComplexDocs) {
-    finalProvider = 'openrouter';
-    finalModelId = 'deepseek/deepseek-chat'; 
   } else {
+    // [STANDARD PIPELINE]: Respect user model selection. Prioritize Groq node for JLR Supremacy.
     const isGroqModel = modelId.includes('versatile') || modelId.includes('instant');
     finalProvider = (isGroqModel ? 'groq' : (orKey ? 'openrouter' : 'groq'));
   }

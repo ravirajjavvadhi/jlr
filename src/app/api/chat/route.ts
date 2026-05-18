@@ -444,7 +444,7 @@ You are JLR AI (Supreme Edition). Your signature is absolute technical authority
         }
 
         // [CRITICAL OPTIMIZATION]: Try every key once, with a hard cap to avoid hanging.
-        const maxAttempts = Math.min(Math.max(activeKeys.length, 3), 12);
+        const maxAttempts = Math.min(Math.max(activeKeys.length, 3), 20);
         let attempts = 0;
         let success = false;
         let lastErrorMsg = 'All Neural Nodes Exhausted';
