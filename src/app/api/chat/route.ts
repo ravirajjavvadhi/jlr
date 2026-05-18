@@ -280,31 +280,31 @@ You are JLR AI (Supreme Edition). Your signature is absolute technical authority
       lastMessage = lastMsgObj.content.find((c: any) => c.type === 'text')?.text || '';
     }
     // [INTELLIGENCE TOGGLE]: Only research if Commander explicitly activates High-Intel mode
-    const isSearchIntent = isSearchMode; // Removed auto-detection to favor Lightning Speed as requested
+    const isSearchIntent = isSearchMode; 
 
     // Load keys from Database (Sovereign Vault)
-    let groqKeysRaw = process.env.GROQ_API_KEY || '';
-    let orKeysRaw = process.env.OPENROUTER_API_KEY || '';
-    let geminiKeysRaw = process.env.GEMINI_API_KEY || '';
+    let groqKeysRaw = process.env.GROQ_API_KEY || process.env.NEXT_PUBLIC_GROQ_API_KEY || '';
+    let orKeysRaw = process.env.OPENROUTER_API_KEY || process.env.NEXT_PUBLIC_OPENROUTER_API_KEY || '';
+    let geminiKeysRaw = process.env.GEMINI_API_KEY || process.env.NEXT_PUBLIC_GEMINI_API_KEY || '';
 
     try {
       await connectToDatabase();
-      const SystemConfig = (await import('@/models/SystemConfig')).default;
+      const SystemConfigModel = (await import('@/models/SystemConfig')).default;
+      const UserModel = (await import('@/models/User')).default;
       
-      // Load global configs first (independent of user)
-      const configs = await SystemConfig.find({}).lean();
-      const masterGroq = (configs as any[]).find(c => c.key === 'master_groq_keys')?.value;
-      const masterGemini = (configs as any[]).find(c => c.key === 'master_gemini_keys')?.value;
-      const orKey = (configs as any[]).find(c => c.key === 'openrouter_key')?.value;
+      const configs = await SystemConfigModel.find({}).lean();
+      // Try multiple key variants for resilience
+      const masterGroq = (configs as any[]).find(c => c.key === 'master_groq_keys' || c.key === 'groq_keys' || c.key === 'master_groq')?.value;
+      const masterGemini = (configs as any[]).find(c => c.key === 'master_gemini_keys' || c.key === 'gemini_keys' || c.key === 'master_gemini')?.value;
+      const orKey = (configs as any[]).find(c => c.key === 'openrouter_key' || c.key === 'master_openrouter')?.value;
 
       if (masterGroq) groqKeysRaw = masterGroq + (groqKeysRaw ? `,${groqKeysRaw}` : '');
       if (masterGemini) geminiKeysRaw = masterGemini + (geminiKeysRaw ? `,${geminiKeysRaw}` : '');
       if (orKey) orKeysRaw = orKey + (orKeysRaw ? `,${orKeysRaw}` : '');
 
-      // Load user-specific keys safely
-      if (userId && userId !== 'guest' && userId.length === 24) { 
+      if (userId && userId !== 'guest' && userId.length >= 20) { 
         try {
-          const userDoc = await User.findById(userId).lean();
+          const userDoc = await UserModel.findById(userId).lean();
           if (userDoc) {
             const userGroqRaw = (userDoc as any).custom_api_key || '';
             const userGeminiArr: string[] = (userDoc as any).gemini_api_keys || [];
@@ -312,7 +312,7 @@ You are JLR AI (Supreme Edition). Your signature is absolute technical authority
             if (userGeminiArr.length > 0) geminiKeysRaw = userGeminiArr.join(',') + (geminiKeysRaw ? `,${geminiKeysRaw}` : '');
           }
         } catch (uErr) {
-          console.warn('[USER-KEY ERROR]: Invalid user lookup', uErr);
+          console.warn('[USER-KEY ERROR]: lookup failure', uErr);
         }
       }
     } catch (e) {
@@ -444,9 +444,11 @@ You are JLR AI (Supreme Edition). Your signature is absolute technical authority
         }
 
         let activeKeys = (streamProvider === 'gemini' ? geminiKeys : (streamProvider === 'openrouter' ? orKeys : groqKeys));
-        if (activeKeys.length === 0) {
-          streamProvider = 'groq';
-          activeKeys = groqKeys;
+        
+        // [GROQ PRIORITIZATION]: If we are in general chat, force Groq keys if they exist at all
+        if (!hasVisionContent && groqKeys.length > 0) {
+            streamProvider = 'groq';
+            activeKeys = groqKeys;
         }
 
         // [CRITICAL OPTIMIZATION]: Try every key once, with a hard cap to avoid hanging.
