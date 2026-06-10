@@ -22,6 +22,8 @@ import SovereignCinematic from '@/components/SovereignCinematic';
 import Sidebar from '@/components/Sidebar';
 import NeuralCanvas3D from '@/components/NeuralCanvas3D';
 import RotatingBeast from '@/components/RotatingBeast';
+import CompanionWidget from '@/components/CompanionWidget';
+
 
 const CodeBlock = ({ inline, className, children, ...props }: any) => {
   const [copied, setCopied] = useState(false);
@@ -81,6 +83,8 @@ export default function AppMain() {
   const scrollRef = useRef<HTMLDivElement>(null);
   const lastChatIdRef = useRef<string | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
+  const lastMessageCountRef = useRef<number>(0);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const checkMobile = () => {
@@ -130,12 +134,9 @@ export default function AppMain() {
   };
 
   const scrollToBottom = useCallback((smooth = false) => { 
-    if (scrollRef.current) {
-      scrollRef.current.scrollTo({ 
-        top: scrollRef.current.scrollHeight, 
-        behavior: smooth ? 'smooth' : 'auto' 
-      }); 
-    } 
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: smooth ? 'smooth' : 'auto', block: 'end' });
+    }
   }, []);
 
   // ─── VIEWPORT LOCK (Prevent Keyboard Squish) ──────────────────────────────
@@ -150,9 +151,15 @@ export default function AppMain() {
     return () => window.removeEventListener('resize', lockHeight);
   }, []);
 
-  useEffect(() => { 
-    scrollToBottom(localMessages.length > 0 && !isLoading); 
-  }, [localMessages, scrollToBottom, isLoading]);
+  // ─── STABLE SCROLL: Only scroll when a NEW message is added, not on streaming tokens ───
+  useEffect(() => {
+    const currentCount = localMessages.length;
+    if (currentCount !== lastMessageCountRef.current) {
+      lastMessageCountRef.current = currentCount;
+      // Small delay so the DOM has rendered the new message element before scrolling
+      setTimeout(() => scrollToBottom(currentCount > 1), 50);
+    }
+  }, [localMessages.length, scrollToBottom]);
 
   useEffect(() => {
     if (user && user.id !== 'guest') {
@@ -201,8 +208,11 @@ Requirements:
     setFiles([]);
     setIsLoading(true);
     
-    // [NEURAL INTENT]: Detect if user wants an image or video to trigger beast loading
-    const isArtIntent = /draw|create|generate|render.*?image|picture|photo|art|video|movie|film/i.test(originalInput);
+    // [NEURAL INTENT]: Only detect EXPLICIT image/art/video creation requests.
+    // Must contain an action verb AND a visual/media noun together to avoid false positives on study queries.
+    const isArtIntent = /\b(draw|paint|sketch|illustrate|generate\s+(an?\s+)?(image|picture|photo|art|artwork|illustration|graphic)|create\s+(an?\s+)?(image|picture|photo|art|artwork|visual)|show\s+me\s+(an?\s+)?(image|photo|picture|art))\b/i.test(originalInput)
+      || /\b(make|produce|render)\s+(an?\s+)?(image|picture|photo|visual|artwork)\b/i.test(originalInput)
+      || /\b(video|movie|film|animation|clip)\b/i.test(originalInput);
     if (isArtIntent) setIsGeneratingImage(true);
 
     abortControllerRef.current = new AbortController();
@@ -556,6 +566,8 @@ Requirements:
                 <LoaderPulse />
               </div>
             )}
+            {/* Scroll anchor – always sits at the bottom of the message list */}
+            <div ref={messagesEndRef} style={{ height: '1px', flexShrink: 0 }} />
           </div>
         </div>
 
@@ -724,10 +736,9 @@ Requirements:
         .prose blockquote { border-left: 4px solid var(--accent-primary); padding-left: 1rem; margin: 1rem 0; font-style: italic; opacity: 0.8; }
         
         .chat-scroll::-webkit-scrollbar { width: 5px; }
-        .chat-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
       `}</style>
-
     </div>
+
   );
 }
 

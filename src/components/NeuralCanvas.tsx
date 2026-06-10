@@ -112,10 +112,10 @@ export default function NeuralCanvas({ prompt, userId }: NeuralCanvasProps) {
   const getPollinationsUrl = (seed: number) => {
     if (!architecture) return '';
     const encodedPrompt = encodeURIComponent(architecture.enhanced);
-    const encodedNegative = encodeURIComponent(architecture.negative);
-    // OPTIMIZATION: Use 768x768 for significantly faster generation while maintaining HD quality
-    return `https://image.pollinations.ai/prompt/${encodedPrompt}?width=768&height=768&nologo=true&seed=${seed}&model=flux&negative=${encodedNegative}`;
-  };
+    const encodedNegative = encodeURIComponent(architecture.negative || 'blurry, low quality');
+    // Use a stable timestamp per generate cycle (via regenerateCount) so re-renders don't bust cache
+    return `https://image.pollinations.ai/prompt/${encodedPrompt}?width=768&height=768&nologo=true&seed=${seed}&model=flux&negative=${encodedNegative}&t=${regenerateCount}`;
+  }
 
   const handleDownload = async (url: string) => {
     try {
@@ -189,7 +189,7 @@ export default function NeuralCanvas({ prompt, userId }: NeuralCanvasProps) {
         </div>
 
         <div style={{ padding: '12px' }}>
-          {/* Main Stage */}
+          {/* Main Stage - shows the selected full-size image */}
           <div style={{
             position: 'relative',
             aspectRatio: '1/1',
@@ -198,8 +198,9 @@ export default function NeuralCanvas({ prompt, userId }: NeuralCanvasProps) {
             background: '#000',
             border: '1px solid rgba(255,255,255,0.05)'
           }}>
+            {/* Loading overlay */}
             <AnimatePresence>
-              {(phase === 'architecting' || phase === 'rendering') && (
+              {(phase === 'architecting' || (phase === 'rendering' && loadedImages.size === 0)) && (
                 <motion.div
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
@@ -213,85 +214,83 @@ export default function NeuralCanvas({ prompt, userId }: NeuralCanvasProps) {
                   <Loader2 size={24} className="animate-spin" style={{ color: '#10b981' }} />
                   <div style={{ textAlign: 'center' }}>
                     <p style={{ fontSize: '0.6rem', fontWeight: 900, color: '#10b981', letterSpacing: '1px', textTransform: 'uppercase' }}>
-                      {phase === 'architecting' ? 'Architecting...' : 'Rendering 3 Variants...'}
+                      {phase === 'architecting' ? 'Architecting...' : 'Loading Image...'}
                     </p>
-                    {loadedImages.size > 0 && phase === 'rendering' && (
-                        <p style={{ fontSize: '0.5rem', color: 'rgba(255,255,255,0.3)', marginTop: '4px' }}>
-                            {loadedImages.size} / {architecture?.seeds.length} READY
-                        </p>
-                    )}
                   </div>
                 </motion.div>
               )}
             </AnimatePresence>
 
-            {/* Parallel loaders */}
-            {architecture && (
-              <div style={{ display: 'none' }}>
-                {architecture.seeds.map((seed: number) => (
-                  <img 
-                    key={seed} 
-                    src={getPollinationsUrl(seed)} 
-                    onLoad={() => handleImageLoad(seed)} 
-                    onError={() => handleImageError(seed)}
-                    alt="" 
-                  />
-                ))}
-              </div>
-            )}
-
-            {/* Active Display */}
-            {currentImageUrl && (
+            {/* Main selected image — only rendered when a seed is selected */}
+            {selectedSeed && (
               <img
-                src={currentImageUrl}
+                key={selectedSeed}
+                src={getPollinationsUrl(selectedSeed)}
                 alt={prompt}
                 style={{
-                  width: '100%', height: '100%', objectFit: 'cover',
-                  opacity: phase === 'done' ? 1 : 0.4,
+                  width: '100%',
+                  height: '100%',
+                  objectFit: 'cover',
+                  opacity: 1,
                   transition: 'opacity 0.5s ease',
-                  cursor: 'pointer'
+                  cursor: phase === 'done' ? 'zoom-in' : 'default',
+                  display: 'block'
                 }}
-                onClick={() => phase === 'done' && (setFullScreenUrl(currentImageUrl), setIsFullScreen(true))}
+                onClick={() => phase === 'done' && currentImageUrl && (setFullScreenUrl(currentImageUrl), setIsFullScreen(true))}
               />
             )}
           </div>
 
-          {/* Variant Selector */}
+          {/* Variant Selector — each thumbnail loads independently */}
           {architecture && (
             <div style={{ marginTop: '12px', display: 'flex', gap: '8px' }}>
-                {architecture.seeds.map((seed: number) => {
-                  const isLoaded = loadedImages.has(seed);
-                  const isFailed = failedImages.has(seed);
-                  const isSelected = selectedSeed === seed;
-                  
-                  return (
-                    <div
-                      key={seed}
-                      onClick={() => isLoaded && setSelectedSeed(seed)}
+              {architecture.seeds.map((seed: number) => {
+                const isLoaded = loadedImages.has(seed);
+                const isFailed = failedImages.has(seed);
+                const isSelected = selectedSeed === seed;
+
+                return (
+                  <div
+                    key={seed}
+                    onClick={() => isLoaded && setSelectedSeed(seed)}
+                    style={{
+                      width: '56px', height: '56px',
+                      borderRadius: '10px',
+                      overflow: 'hidden',
+                      background: 'rgba(255,255,255,0.04)',
+                      border: isSelected ? '2px solid #10b981' : '1px solid rgba(255,255,255,0.1)',
+                      cursor: isLoaded ? 'pointer' : 'default',
+                      position: 'relative',
+                      flexShrink: 0,
+                      transition: 'border-color 0.2s'
+                    }}
+                  >
+                    {/* Thumbnail img always present — browser caches from its own load */}
+                    <img
+                      src={getPollinationsUrl(seed)}
+                      alt=""
                       style={{
-                        width: '50px', height: '50px',
-                        borderRadius: '8px',
-                        overflow: 'hidden',
-                        background: 'rgba(255,255,255,0.03)',
-                        border: isSelected ? '2px solid #10b981' : '1px solid rgba(255,255,255,0.08)',
-                        cursor: isLoaded ? 'pointer' : 'default',
-                        position: 'relative'
+                        width: '100%', height: '100%', objectFit: 'cover',
+                        display: isLoaded ? 'block' : 'none'
                       }}
-                    >
-                      {isLoaded ? (
-                        <img src={getPollinationsUrl(seed)} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="" />
-                      ) : isFailed ? (
-                        <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                            <AlertTriangle size={12} color="rgba(255,0,0,0.3)" />
-                        </div>
-                      ) : (
-                        <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                          <Loader2 size={10} className="animate-spin" style={{ color: 'rgba(255,255,255,0.1)' }} />
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
+                      onLoad={() => handleImageLoad(seed)}
+                      onError={() => handleImageError(seed)}
+                    />
+                    {/* Spinner while loading */}
+                    {!isLoaded && !isFailed && (
+                      <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <Loader2 size={12} className="animate-spin" style={{ color: 'rgba(255,255,255,0.2)' }} />
+                      </div>
+                    )}
+                    {/* Error icon */}
+                    {isFailed && (
+                      <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <AlertTriangle size={12} color="rgba(255,80,80,0.5)" />
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           )}
 
