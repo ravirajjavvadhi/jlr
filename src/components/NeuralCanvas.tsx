@@ -20,9 +20,11 @@ export default function NeuralCanvas({ prompt, userId }: NeuralCanvasProps) {
   const [isFullScreen, setIsFullScreen] = useState(false);
   const [fullScreenUrl, setFullScreenUrl] = useState('');
   const [regenerateCount, setRegenerateCount] = useState(0);
+  const [currentModel, setCurrentModel] = useState<'turbo' | 'flux-schnell' | 'flux-realism'>('turbo');
+  const [retryCount, setRetryCount] = useState(0);
   const hasFetched = useRef(false);
-  
-  // Resilient Phase Guard: Force 'done' if rendering takes too long
+
+  // [RESILIENCE PRO]: Force 'done' if rendering takes too long
   useEffect(() => {
     if (phase === 'rendering') {
       const timer = setTimeout(() => {
@@ -51,7 +53,6 @@ export default function NeuralCanvas({ prompt, userId }: NeuralCanvasProps) {
       if (!res.ok) throw new Error('Architect API failed');
       const data = await res.json();
       
-      // OPTIMIZATON: Use 3 high-quality variants instead of 4 to reduce server load/latency
       if (data.seeds && data.seeds.length > 3) {
         data.seeds = data.seeds.slice(0, 3);
       }
@@ -101,9 +102,20 @@ export default function NeuralCanvas({ prompt, userId }: NeuralCanvasProps) {
       next.add(seed);
       
       const totalExpected = architecture?.seeds?.length || 3;
+
+      // [AUTO-FALLBACK]: If 100% failure on current model, try auto-rotation once
+      if (next.size >= totalExpected && loadedImages.size === 0 && retryCount < 2) {
+        setRetryCount(r => r + 1);
+        const nextModel = currentModel === 'turbo' ? 'flux-schnell' : (currentModel === 'flux-schnell' ? 'flux-realism' : 'turbo');
+        setCurrentModel(nextModel);
+        // handleReload is called automatically by setCurrentModel in the UI, 
+        // but here we force a state reset for the auto-switch
+        setTimeout(() => setRegenerateCount(c => c + 1), 100);
+      }
+
       if (next.size + loadedImages.size >= totalExpected) {
         if (loadedImages.size > 0) setPhase('done');
-        else setPhase('error');
+        else if (retryCount >= 2) setPhase('error');
       }
       return next;
     });
@@ -112,10 +124,18 @@ export default function NeuralCanvas({ prompt, userId }: NeuralCanvasProps) {
   const getPollinationsUrl = (seed: number) => {
     if (!architecture) return '';
     const encodedPrompt = encodeURIComponent(architecture.enhanced);
-    // model=turbo is near-instant and extremely reliable compared to flux. 
-    // We remove negative prompts and extra t parameters for maximum bandwidth compatibility.
-    return `https://image.pollinations.ai/prompt/${encodedPrompt}?width=768&height=768&nologo=true&seed=${seed}&model=turbo`;
+    // [SOVEREIGN ENGINE]: Support for Nano (Fast) and Pro (HQ) models
+    return `https://image.pollinations.ai/prompt/${encodedPrompt}?width=768&height=768&nologo=true&seed=${seed}&model=${currentModel}`;
   }
+
+  const handleReload = () => {
+    setRegenerateCount(prev => prev + 1);
+    setLoadedImages(new Set());
+    setFailedImages(new Set());
+    setSelectedSeed(null);
+    setPhase('architecting');
+    setRetryCount(0);
+  };
 
   const handleDownload = async (url: string) => {
     try {
@@ -189,6 +209,35 @@ export default function NeuralCanvas({ prompt, userId }: NeuralCanvasProps) {
         </div>
 
         <div style={{ padding: '12px' }}>
+          {/* [ENGINE SELECTOR] */}
+          <div style={{ display: 'flex', gap: '8px', marginBottom: '14px', overflowX: 'auto', paddingBottom: '4px' }} className="no-scrollbar">
+            {[
+              { id: 'turbo', label: 'TURBO V4' },
+              { id: 'flux-schnell', label: 'NANO (FAST)' },
+              { id: 'flux-realism', label: 'PRO (HQ)' }
+            ].map(m => (
+              <button
+                key={m.id}
+                onClick={() => { setCurrentModel(m.id as any); handleReload(); }}
+                style={{
+                  padding: '4px 10px',
+                  borderRadius: '8px',
+                  fontSize: '0.55rem',
+                  fontWeight: 900,
+                  background: currentModel === m.id ? '#10b981' : 'rgba(255,255,255,0.03)',
+                  color: currentModel === m.id ? '#000' : 'rgba(255,255,255,0.4)',
+                  border: '1px solid',
+                  borderColor: currentModel === m.id ? '#10b981' : 'rgba(255,255,255,0.05)',
+                  cursor: 'pointer',
+                  whiteSpace: 'nowrap',
+                  transition: 'all 0.2s'
+                }}
+              >
+                {m.label}
+              </button>
+            ))}
+          </div>
+
           {/* Main Stage - shows the selected full-size image */}
           <div style={{
             position: 'relative',
