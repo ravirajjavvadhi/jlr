@@ -101,29 +101,11 @@ export default function AppMain() {
 
   const currentChat = chats.find(c => c.id === currentChatId);
 
-  useEffect(() => {
-    if (isLoading) return; 
-    
-    if (currentChat) {
-      const cloudMsgs = currentChat.messages || [];
-      const isChatSwitch = lastChatIdRef.current !== currentChatId;
-      
-      // [SOVEREIGN PROTECTION]: On chat switch, clear local messages first to prevent ghost rendering collisions
-      if (isChatSwitch) {
-        setLocalMessages([]); 
-        // Small delay to ensure state clears before loading new batch
-        setTimeout(() => {
-          setLocalMessages(cloudMsgs);
-          lastChatIdRef.current = currentChatId;
-        }, 10);
-      } else if (localMessages.length === 0 && cloudMsgs.length > 0) {
-        setLocalMessages(cloudMsgs);
-      }
-    } else if (!currentChatId) {
-      if (localMessages.length > 0) setLocalMessages([]);
-      lastChatIdRef.current = null;
+  const scrollToBottom = useCallback((smooth = false) => { 
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: smooth ? 'smooth' : 'auto', block: 'end' });
     }
-  }, [currentChatId, chats, isLoading]);
+  }, []);
 
   const stopStreaming = () => {
     if (abortControllerRef.current) {
@@ -133,11 +115,29 @@ export default function AppMain() {
     setIsLoading(false);
   };
 
-  const scrollToBottom = useCallback((smooth = false) => { 
-    if (messagesEndRef.current) {
-      messagesEndRef.current.scrollIntoView({ behavior: smooth ? 'smooth' : 'auto', block: 'end' });
+  useEffect(() => {
+    if (isLoading) return; 
+    
+    if (currentChat) {
+      const cloudMsgs = currentChat.messages || [];
+      const isChatSwitch = lastChatIdRef.current !== currentChatId;
+      
+      if (isChatSwitch) {
+        setLocalMessages([]); 
+        setTimeout(() => {
+          setLocalMessages(cloudMsgs);
+          lastChatIdRef.current = currentChatId;
+          // After a chat switch, we definitely want to be at the bottom
+          setTimeout(() => scrollToBottom(false), 100);
+        }, 10);
+      } else if (localMessages.length === 0 && cloudMsgs.length > 0) {
+        setLocalMessages(cloudMsgs);
+      }
+    } else if (!currentChatId) {
+      if (localMessages.length > 0) setLocalMessages([]);
+      lastChatIdRef.current = null;
     }
-  }, []);
+  }, [currentChatId, chats, isLoading, scrollToBottom]);
 
   // ─── VIEWPORT LOCK (Prevent Keyboard Squish) ──────────────────────────────
   useEffect(() => {
@@ -151,15 +151,39 @@ export default function AppMain() {
     return () => window.removeEventListener('resize', lockHeight);
   }, []);
 
-  // ─── STABLE SCROLL: Only scroll when a NEW message is added, not on streaming tokens ───
+  // ─── STABLE STICKY SCROLL: Only scroll to bottom if already at the bottom ───
   useEffect(() => {
+    const chatScroll = scrollRef.current;
+    if (!chatScroll) return;
+
+    const handleScroll = () => {
+      const { scrollTop, scrollHeight, clientHeight } = chatScroll;
+      const atBottom = scrollHeight - scrollTop - clientHeight < 100; // 100px threshold
+      
+      // If the scroll happened because of a length change, we handle it separately
+      // This listener is mainly to keep track of user intent
+    };
+
+    chatScroll.addEventListener('scroll', handleScroll);
+    return () => chatScroll.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  useEffect(() => {
+    const chatScroll = scrollRef.current;
+    if (!chatScroll) return;
+
+    const { scrollTop, scrollHeight, clientHeight } = chatScroll;
+    const isAtBottom = scrollHeight - scrollTop - clientHeight < 150;
+    
     const currentCount = localMessages.length;
-    if (currentCount !== lastMessageCountRef.current) {
+    const isNewMessage = currentCount > lastMessageCountRef.current;
+    const isAssistantTyping = isLoading && localMessages[localMessages.length - 1]?.role === 'assistant';
+
+    if (isNewMessage || (isAssistantTyping && isAtBottom)) {
       lastMessageCountRef.current = currentCount;
-      // Small delay so the DOM has rendered the new message element before scrolling
-      setTimeout(() => scrollToBottom(currentCount > 1), 50);
+      scrollToBottom(isNewMessage);
     }
-  }, [localMessages.length, scrollToBottom]);
+  }, [localMessages, scrollToBottom, isLoading]);
 
   useEffect(() => {
     if (user && user.id !== 'guest') {
@@ -738,8 +762,8 @@ Requirements:
         .chat-scroll::-webkit-scrollbar { width: 5px; }
       `}</style>
     </div>
-
   );
 }
 
 const LoaderPulse = () => <div style={{ display: 'flex', gap: '8px' }}>{[0,1,2].map(i => <motion.div key={i} animate={{ opacity: [0.3, 1, 0.3], scale: [1, 1.2, 1] }} transition={{ duration: 1.2, repeat: Infinity, delay: i*0.2 }} style={{ width: '10px', height: '10px', borderRadius: '50%', background: 'var(--accent-beast)', boxShadow: '0 0 10px var(--accent-beast)' }} />)}</div>;
+

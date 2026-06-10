@@ -112,9 +112,9 @@ export default function NeuralCanvas({ prompt, userId }: NeuralCanvasProps) {
   const getPollinationsUrl = (seed: number) => {
     if (!architecture) return '';
     const encodedPrompt = encodeURIComponent(architecture.enhanced);
-    const encodedNegative = encodeURIComponent(architecture.negative || 'blurry, low quality');
-    // Use a stable timestamp per generate cycle (via regenerateCount) so re-renders don't bust cache
-    return `https://image.pollinations.ai/prompt/${encodedPrompt}?width=768&height=768&nologo=true&seed=${seed}&model=flux&negative=${encodedNegative}&t=${regenerateCount}`;
+    // model=turbo is near-instant and extremely reliable compared to flux. 
+    // We remove negative prompts and extra t parameters for maximum bandwidth compatibility.
+    return `https://image.pollinations.ai/prompt/${encodedPrompt}?width=768&height=768&nologo=true&seed=${seed}&model=turbo`;
   }
 
   const handleDownload = async (url: string) => {
